@@ -42,6 +42,10 @@ const form = ref<TransactionForm>({
   tax: ''
 });
 
+const dateMenu = ref(false);
+const startDateMenu = ref(false);
+const endDateMenu = ref(false);
+
 const updateFormDate = (val: Date | string) => {
   if (!val) return;
   const dateStr = formatDateToString(val);
@@ -51,6 +55,11 @@ const updateFormDate = (val: Date | string) => {
   } else {
     form.value.datePicker = dateStr;
   }
+};
+
+const confirmFormDate = () => {
+  updateFormDate(form.value.datePicker);
+  dateMenu.value = false;
 };
 
 interface TransactionFilters {
@@ -82,6 +91,11 @@ const updateStartDate = (val: Date | string) => {
   }
 };
 
+const confirmStartDate = () => {
+  updateStartDate(filters.value.startDatePicker);
+  startDateMenu.value = false;
+};
+
 const updateEndDate = (val: Date | string) => {
   if (!val) return;
   const dateStr = formatDateToString(val);
@@ -91,6 +105,11 @@ const updateEndDate = (val: Date | string) => {
   } else {
     filters.value.endDatePicker = dateStr;
   }
+};
+
+const confirmEndDate = () => {
+  updateEndDate(filters.value.endDatePicker);
+  endDateMenu.value = false;
 };
 
 const computedTotal = computed(() => {
@@ -189,7 +208,7 @@ onMounted(() => {
         <v-form @submit.prevent="submitForm">
           <v-row>
             <v-col cols="12" sm="6" md="3">
-              <v-menu>
+              <v-menu v-model="dateMenu" :close-on-content-click="false" :close-on-esc="false">
                 <template #activator="{ props }">
                   <v-text-field
                     v-model="form.date"
@@ -200,7 +219,17 @@ onMounted(() => {
                     v-bind="props"
                   />
                 </template>
-                <v-date-picker v-model="form.datePicker" @update:model-value="updateFormDate" />
+                <v-date-picker v-model="form.datePicker" hide-title color="primary">
+                  <template #actions>
+                    <v-btn
+                      text
+                      color="primary"
+                      @click="confirmFormDate"
+                    >
+                      確認
+                    </v-btn>
+                  </template>
+                </v-date-picker>
               </v-menu>
             </v-col>
 
@@ -325,7 +354,7 @@ onMounted(() => {
             />
           </v-col>
           <v-col cols="6" sm="3" md="2">
-            <v-menu>
+            <v-menu v-model="startDateMenu" :close-on-content-click="false" :close-on-esc="false">
               <template #activator="{ props }">
                 <v-text-field
                   v-model="filters.startDate"
@@ -337,11 +366,21 @@ onMounted(() => {
                   v-bind="props"
                 />
               </template>
-              <v-date-picker v-model="filters.startDatePicker" @update:model-value="updateStartDate" />
+              <v-date-picker v-model="filters.startDatePicker" hide-title color="primary">
+                <template #actions>
+                  <v-btn
+                    text
+                    color="primary"
+                    @click="confirmStartDate"
+                  >
+                    確認
+                  </v-btn>
+                </template>
+              </v-date-picker>
             </v-menu>
           </v-col>
           <v-col cols="6" sm="3" md="2">
-            <v-menu>
+            <v-menu v-model="endDateMenu" :close-on-content-click="false" :close-on-esc="false">
               <template #activator="{ props }">
                 <v-text-field
                   v-model="filters.endDate"
@@ -353,7 +392,17 @@ onMounted(() => {
                   v-bind="props"
                 />
               </template>
-              <v-date-picker v-model="filters.endDatePicker" @update:model-value="updateEndDate" />
+              <v-date-picker v-model="filters.endDatePicker" hide-title color="primary">
+                <template #actions>
+                  <v-btn
+                    text
+                    color="primary"
+                    @click="confirmEndDate"
+                  >
+                    確認
+                  </v-btn>
+                </template>
+              </v-date-picker>
             </v-menu>
           </v-col>
           <v-col cols="12" sm="6" md="2">

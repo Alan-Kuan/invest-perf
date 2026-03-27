@@ -40,6 +40,8 @@ const form = ref<DividendForm>({
   fee: ''
 });
 
+const dateMenu = ref(false);
+
 const updatePayDate = (val: Date | string) => {
   if (!val) return;
   const dateStr = formatDateToString(val);
@@ -49,6 +51,11 @@ const updatePayDate = (val: Date | string) => {
   } else {
     form.value.payDatePicker = dateStr;
   }
+};
+
+const confirmDate = () => {
+  updatePayDate(form.value.payDatePicker);
+  dateMenu.value = false;
 };
 
 interface DividendFilters {
@@ -198,7 +205,7 @@ onMounted(() => {
         <v-form @submit.prevent="submitForm">
           <v-row>
             <v-col cols="12" sm="6" md="3">
-              <v-menu>
+              <v-menu v-model="dateMenu" :close-on-content-click="false" :close-on-esc="false">
                 <template #activator="{ props }">
                   <v-text-field
                     v-model="form.payDate"
@@ -209,7 +216,17 @@ onMounted(() => {
                     v-bind="props"
                   />
                 </template>
-                <v-date-picker v-model="form.payDatePicker" @update:model-value="updatePayDate" />
+                <v-date-picker v-model="form.payDatePicker" hide-title color="primary">
+                  <template #actions>
+                    <v-btn
+                      text
+                      color="primary"
+                      @click="confirmDate"
+                    >
+                      確認
+                    </v-btn>
+                  </template>
+                </v-date-picker>
               </v-menu>
             </v-col>
 
