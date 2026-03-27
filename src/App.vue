@@ -76,13 +76,13 @@ const handleClear = async () => {
           <v-divider class="mb-4" />
           <div class="text-caption text-grey mb-2">資料管理</div>
           <v-list nav density="compact">
-            <v-list-item @click="handleExport" prepend-icon="mdi-download" title="匯出備份" density="compact" class="mb-1 rounded-lg px-2" />
+            <v-list-item @click="handleExport" prepend-icon="mdi-download" title="匯出資料庫" density="compact" class="mb-1 rounded-lg px-2" />
             <v-list-item @click="handleImportClick" prepend-icon="mdi-upload" :disabled="isImporting" density="compact" class="mb-1 rounded-lg px-2">
               <template #title>
-                {{ isImporting ? '匯入中...' : '匯入資料' }}
+                {{ isImporting ? '匯入中...' : '匯入資料庫' }}
               </template>
             </v-list-item>
-            <v-list-item @click="handleClear" prepend-icon="mdi-delete" title="清除所有資料" class="text-error rounded-lg px-2" density="compact" />
+            <v-list-item @click="handleClear" prepend-icon="mdi-delete" title="清除資料庫" class="text-error rounded-lg px-2" density="compact" />
             <input
               ref="fileInput"
               type="file"
