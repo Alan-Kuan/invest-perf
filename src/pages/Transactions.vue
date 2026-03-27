@@ -62,6 +62,14 @@ const confirmFormDate = () => {
   dateMenu.value = false;
 };
 
+const adjustShares = (delta: number) => {
+  const current = parseInt(form.value.shares) || 0;
+  const newValue = current + delta;
+  if (newValue > 0) {
+    form.value.shares = String(newValue);
+  }
+};
+
 interface TransactionFilters {
   ticker: string;
   type: string;
@@ -254,14 +262,24 @@ onMounted(() => {
             </v-col>
 
             <v-col cols="12" sm="6" md="3">
-                 <v-text-field
-                   v-model="form.shares"
-                   label="成交股數"
-                   type="number"
-                   variant="outlined"
-                   density="compact"
-                   min="1"
-                 />
+              <v-text-field
+                v-model="form.shares"
+                label="成交股數"
+                type="number"
+                variant="outlined"
+                density="compact"
+                min="1"
+                hide-spin-buttons
+              >
+                <template #append-inner>
+                  <div class="d-flex">
+                    <v-btn size="small" color="success" variant="text" @click="adjustShares(1000)">+1K</v-btn>
+                    <v-btn size="small" color="success" variant="text" @click="adjustShares(100)">+100</v-btn>
+                    <v-btn size="small" color="error" variant="text" @click="adjustShares(-1000)">-1K</v-btn>
+                    <v-btn size="small" color="error" variant="text" @click="adjustShares(-100)">-100</v-btn>
+                  </div>
+                </template>
+              </v-text-field>
             </v-col>
 
             <v-col cols="12" sm="6" md="3">
@@ -461,3 +479,5 @@ onMounted(() => {
     </v-card>
   </div>
 </template>
+
+
