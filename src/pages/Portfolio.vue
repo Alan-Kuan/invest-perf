@@ -107,7 +107,7 @@ onMounted(() => {
 
     <v-row class="mb-4" align="stretch">
       <v-col sm="6" md="4" lg="2">
-        <v-card class="rounded-xl h-full" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
+        <v-card class="rounded-lg h-full" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
           <v-card-text>
             <div class="text-caption text-grey">總成本</div>
             <div class="text-xl font-weight-bold">{{ summary.totalCost.toLocaleString() }}</div>
@@ -115,7 +115,7 @@ onMounted(() => {
         </v-card>
       </v-col>
       <v-col sm="6" md="4" lg="2">
-        <v-card class="rounded-xl h-full" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
+        <v-card class="rounded-lg h-full" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
           <v-card-text>
             <div class="text-caption text-grey">總市值</div>
             <div class="text-xl font-weight-bold">{{ summary.totalValue.toLocaleString() }}</div>
@@ -123,7 +123,7 @@ onMounted(() => {
         </v-card>
       </v-col>
       <v-col sm="6" md="4" lg="2">
-        <v-card class="rounded-xl h-full" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
+        <v-card class="rounded-lg h-full" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
           <v-card-text>
             <div class="text-caption text-grey">未實現損益</div>
             <div class="text-xl font-weight-bold" :class="summary.totalUnrealized >= 0 ? 'text-success' : 'text-error'">
@@ -133,7 +133,7 @@ onMounted(() => {
         </v-card>
       </v-col>
       <v-col sm="6" md="4" lg="2">
-        <v-card class="rounded-xl h-full" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
+        <v-card class="rounded-lg h-full" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
           <v-card-text>
             <div class="text-caption text-grey">已實現損益</div>
             <div class="text-xl font-weight-bold" :class="summary.realizedGain >= 0 ? 'text-success' : 'text-error'">
@@ -143,7 +143,7 @@ onMounted(() => {
         </v-card>
       </v-col>
       <v-col sm="12" md="4" lg="2">
-        <v-card class="rounded-xl h-full" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
+        <v-card class="rounded-lg h-full" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
           <v-card-text>
             <div class="text-caption text-grey">總損益</div>
             <div class="text-xl font-weight-bold" :class="summary.totalGain >= 0 ? 'text-success' : 'text-error'">
@@ -154,8 +154,8 @@ onMounted(() => {
       </v-col>
     </v-row>
 
-    <v-card class="rounded-xl" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
-      <v-card-title class="text-base font-semibold pb-2">持有部位</v-card-title>
+    <v-card class="rounded-lg" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
+      <v-card-item class="text-base font-semibold pb-2">持有部位</v-card-item>
       <v-card-text>
         <v-table>
           <thead>

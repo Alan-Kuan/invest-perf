@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import UnoCSS from 'unocss/vite';
-import { resolve } from 'path';
+import path from 'node:path';
 import { viteStaticCopy } from 'vite-plugin-static-copy';
 
 export default defineConfig({
@@ -11,9 +11,9 @@ export default defineConfig({
     viteStaticCopy({
       targets: [
         {
-          src: resolve(__dirname, 'node_modules/sql.js/dist/sql-wasm.wasm'),
+          src: path.resolve(__dirname, 'node_modules/sql.js/dist/sql-wasm.wasm'),
           dest: '',
-          rename: 'sql-wasm.wasm'
+          rename: { stripBase: true }
         }
       ]
     })

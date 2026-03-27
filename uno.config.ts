@@ -1,7 +1,13 @@
-import { defineConfig, presetUno } from 'unocss';
+import { defineConfig } from 'unocss';
+import { presetMini } from '@unocss/preset-mini';
+import { presetVuetify } from 'unocss-preset-vuetify';
 
 export default defineConfig({
   presets: [
-    presetUno()
-  ]
+    presetMini(),
+    presetVuetify()
+  ],
+  outputToCssLayers: {
+    cssLayerName: (layer) => layer === 'properties' ? null : `uno.${layer}`
+  }
 });

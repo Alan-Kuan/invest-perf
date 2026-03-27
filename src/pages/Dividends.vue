@@ -174,7 +174,7 @@ onMounted(() => {
 
     <v-row class="mb-4" align="stretch">
       <v-col sm="4">
-        <v-card class="rounded-xl h-full" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
+        <v-card class="rounded-lg h-full" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
           <v-card-text>
             <div class="text-caption text-grey">實發股利總計</div>
             <div class="text-xl font-weight-bold text-success">{{ totalDividend.toLocaleString() }}</div>
@@ -182,7 +182,7 @@ onMounted(() => {
         </v-card>
       </v-col>
       <v-col sm="4">
-        <v-card class="rounded-xl h-full" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
+        <v-card class="rounded-lg h-full" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
           <v-card-text>
             <div class="text-caption text-grey">現金股利</div>
             <div class="text-xl font-weight-bold">{{ totalCash.toLocaleString() }}</div>
@@ -190,7 +190,7 @@ onMounted(() => {
         </v-card>
       </v-col>
       <v-col sm="4">
-        <v-card class="rounded-xl h-full" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
+        <v-card class="rounded-lg h-full" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
           <v-card-text>
             <div class="text-caption text-grey">股票股利</div>
             <div class="text-xl font-weight-bold">{{ totalStock.toLocaleString() }}</div>
@@ -199,8 +199,8 @@ onMounted(() => {
       </v-col>
     </v-row>
 
-    <v-card class="mb-4 rounded-xl" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
-      <v-card-title class="text-base font-semibold pb-2">新增股利</v-card-title>
+    <v-card class="mb-4 rounded-lg" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
+      <v-card-item class="text-base font-semibold pb-2">新增股利</v-card-item>
       <v-card-text>
         <v-form @submit.prevent="submitForm">
           <v-row>
@@ -281,9 +281,9 @@ onMounted(() => {
               />
             </v-col>
 
-            <v-col class="flex justify-end items-center">
-              <div class="flex items-end mr-6">
-                <div class="mr-2 text-grey text-lg">實發股利</div>
+            <v-col class="d-flex justify-end align-center">
+              <div class="d-flex align-baseline mr-6">
+                <div class="mr-2 text-grey text-[1.125rem]">實發股利</div>
                 <div
                   :class="computedAmount === 0 ? 'text-grey' : 'text-success'"
                   class="text-2xl font-weight-bold"
@@ -301,8 +301,8 @@ onMounted(() => {
       </v-card-text>
     </v-card>
 
-    <v-card class="rounded-xl" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
-      <v-card-title class="text-base font-semibold pb-2">股利歷史</v-card-title>
+    <v-card class="rounded-lg" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
+      <v-card-item class="text-base font-semibold pb-2">股利歷史</v-card-item>
       <v-card-text>
         <v-row class="mb-4" align="center">
           <v-col sm="6" md="3">

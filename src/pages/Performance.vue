@@ -220,40 +220,30 @@ onMounted(() => {
     <h2 class="text-h4 mb-4">投資績效</h2>
 
     <v-row class="mb-4" align="stretch">
-      <v-col sm="6" md="3">
-        <v-card class="rounded-xl h-full" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
-          <v-card-text>
-            <div class="text-caption text-grey">已實現損益</div>
-            <div class="text-xl font-weight-bold" :class="stats.realizedGain >= 0 ? 'text-success' : 'text-error'">
-              {{ stats.realizedGain >= 0 ? '+' : '' }}{{ stats.realizedGain.toLocaleString() }}
-            </div>
-          </v-card-text>
-        </v-card>
-      </v-col>
-      <v-col sm="6" md="3">
-        <v-card class="rounded-xl h-full" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
-          <v-card-text>
-            <div class="text-caption text-grey">股利收入</div>
-            <div class="text-xl font-weight-bold text-success">{{ stats.totalDividend.toLocaleString() }}</div>
-          </v-card-text>
-        </v-card>
-      </v-col>
-      <v-col sm="6" md="3">
-        <v-card class="rounded-xl h-full" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
-          <v-card-text>
-            <div class="text-caption text-grey">總損益</div>
-            <div class="text-xl font-weight-bold" :class="stats.totalReturn >= 0 ? 'text-success' : 'text-error'">
-              {{ stats.totalReturn >= 0 ? '+' : '' }}{{ stats.totalReturn.toLocaleString() }}
-            </div>
-          </v-card-text>
-        </v-card>
-      </v-col>
-      <v-col sm="6" md="3">
-        <v-card class="rounded-xl h-full" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
-          <v-card-text>
-            <div class="text-caption text-grey">交易次數</div>
-            <div class="text-xl font-weight-bold">{{ stats.buyCount + stats.sellCount }}</div>
-            <div class="text-caption text-grey">{{ stats.buyCount }} 買 / {{ stats.sellCount }} 賣</div>
+      <v-col v-for="i in 4" :key="i" sm="6" md="3" class="d-flex align-stretch">
+        <v-card class="rounded-lg w-100" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
+          <v-card-text class="h-100">
+            <template v-if="i === 1">
+              <div class="text-caption text-grey">已實現損益</div>
+              <div class="text-xl font-weight-bold" :class="stats.realizedGain >= 0 ? 'text-success' : 'text-error'">
+                {{ stats.realizedGain >= 0 ? '+' : '' }}{{ stats.realizedGain.toLocaleString() }}
+              </div>
+            </template>
+            <template v-else-if="i === 2">
+              <div class="text-caption text-grey">股利收入</div>
+              <div class="text-xl font-weight-bold text-success">{{ stats.totalDividend.toLocaleString() }}</div>
+            </template>
+            <template v-else-if="i === 3">
+              <div class="text-caption text-grey">總損益</div>
+              <div class="text-xl font-weight-bold" :class="stats.totalReturn >= 0 ? 'text-success' : 'text-error'">
+                {{ stats.totalReturn >= 0 ? '+' : '' }}{{ stats.totalReturn.toLocaleString() }}
+              </div>
+            </template>
+            <template v-else>
+              <div class="text-caption text-grey">交易次數</div>
+              <div class="text-xl font-weight-bold">{{ stats.buyCount + stats.sellCount }}</div>
+              <div class="text-caption text-grey">{{ stats.buyCount }} 買 / {{ stats.sellCount }} 賣</div>
+            </template>
           </v-card-text>
         </v-card>
       </v-col>
@@ -261,8 +251,8 @@ onMounted(() => {
 
     <v-row>
       <v-col md="6">
-        <v-card class="mb-4 rounded-xl" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
-          <v-card-title class="text-base font-semibold pb-2">月度績效</v-card-title>
+        <v-card class="mb-4 rounded-lg" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
+          <v-card-item class="text-base font-semibold pb-2">月度績效</v-card-item>
           <v-card-text>
             <div style="height: 250px">
               <Bar
@@ -276,8 +266,8 @@ onMounted(() => {
         </v-card>
       </v-col>
       <v-col md="6">
-        <v-card class="mb-4 rounded-xl" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
-          <v-card-title class="text-base font-semibold pb-2">累計損益曲線</v-card-title>
+        <v-card class="mb-4 rounded-lg" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
+          <v-card-item class="text-base font-semibold pb-2">累計損益曲線</v-card-item>
           <v-card-text>
             <div style="height: 250px">
               <Line
@@ -292,8 +282,8 @@ onMounted(() => {
       </v-col>
     </v-row>
 
-    <v-card class="mb-4 rounded-xl" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
-      <v-card-title class="text-base font-semibold pb-2">資產配置</v-card-title>
+    <v-card class="mb-4 rounded-lg" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
+      <v-card-item class="text-base font-semibold pb-2">資產配置</v-card-item>
       <v-card-text>
         <div style="height: 300px">
           <Doughnut
@@ -306,8 +296,8 @@ onMounted(() => {
       </v-card-text>
     </v-card>
 
-    <v-card v-if="yearlyDividends.length > 0" class="rounded-xl" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
-      <v-card-title class="text-base font-semibold pb-2">歷年股利</v-card-title>
+    <v-card v-if="yearlyDividends.length > 0" class="rounded-lg" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
+      <v-card-item class="text-base font-semibold pb-2">歷年股利</v-card-item>
       <v-card-text>
         <div class="grid gap-3" style="grid-template-columns: repeat(auto-fill, minmax(120px, 1fr))">
           <div v-for="y in yearlyDividends" :key="y.year" class="bg-grey-lighten-4 p-4 rounded-lg">

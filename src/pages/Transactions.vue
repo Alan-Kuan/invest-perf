@@ -202,8 +202,8 @@ onMounted(() => {
   <div>
     <h2 class="text-h4 mb-4">交易記錄</h2>
 
-    <v-card class="mb-4 rounded-xl" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
-      <v-card-title class="text-base font-semibold pb-2">新增交易</v-card-title>
+    <v-card class="mb-4 rounded-lg" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
+      <v-card-item class="text-base font-semibold pb-2">新增交易</v-card-item>
       <v-card-text>
         <v-form @submit.prevent="submitForm">
           <v-row>
@@ -309,9 +309,9 @@ onMounted(() => {
           </v-row>
 
           <v-row>
-            <v-col class="flex justify-end items-center">
-              <div class="flex items-end mr-6">
-                <div class="mr-2 text-grey text-lg">淨收付</div>
+            <v-col class="d-flex justify-end align-center">
+              <div class="d-flex align-baseline mr-6">
+                <div class="mr-2 text-grey text-[1.125rem]">淨收付</div>
                 <div
                   :class="computedNetAmount === 0 ? 'text-grey' : (form.type === 'buy' ? 'text-error' : 'text-success')"
                   class="text-2xl font-weight-bold"
@@ -329,8 +329,8 @@ onMounted(() => {
       </v-card-text>
     </v-card>
 
-    <v-card class="rounded-xl" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
-      <v-card-title class="text-base font-semibold pb-2">交易歷史</v-card-title>
+    <v-card class="rounded-lg" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
+      <v-card-item class="text-base font-semibold pb-2">交易歷史</v-card-item>
       <v-card-text>
         <v-row class="mb-4" align="center">
           <v-col cols="12" sm="6" md="3">
