@@ -210,14 +210,14 @@ onMounted(() => {
             <v-col cols="12" sm="6" md="3">
               <v-menu v-model="dateMenu" :close-on-content-click="false" :close-on-esc="false">
                 <template #activator="{ props }">
-                  <v-text-field
-                    v-model="form.date"
-                    label="成交日期 *"
-                    variant="outlined"
-                    density="compact"
-                    readonly
-                    v-bind="props"
-                  />
+                   <v-text-field
+                     v-model="form.date"
+                     label="成交日期"
+                     variant="outlined"
+                     density="compact"
+                     readonly
+                     v-bind="props"
+                   />
                 </template>
                 <v-date-picker v-model="form.datePicker" hide-title color="primary">
                   <template #actions>
@@ -246,33 +246,33 @@ onMounted(() => {
             <v-col cols="12" sm="6" md="3">
               <v-select
                 v-model="form.type"
-                :items="[{ title: '買進', value: 'buy' }, { title: '賣出', value: 'sell' }]"
-                label="交易別 *"
-                variant="outlined"
-                density="compact"
-              />
+                 :items="[{ title: '買進', value: 'buy' }, { title: '賣出', value: 'sell' }]"
+                 label="交易別"
+                 variant="outlined"
+                 density="compact"
+               />
             </v-col>
 
             <v-col cols="12" sm="6" md="3">
-              <v-text-field
-                v-model="form.shares"
-                label="成交股數 *"
-                type="number"
-                variant="outlined"
-                density="compact"
-                min="1"
-              />
+                 <v-text-field
+                   v-model="form.shares"
+                   label="成交股數"
+                   type="number"
+                   variant="outlined"
+                   density="compact"
+                   min="1"
+                 />
             </v-col>
 
             <v-col cols="12" sm="6" md="3">
-              <v-text-field
-                v-model="form.price"
-                label="成交單價 *"
-                type="number"
-                step="0.01"
-                variant="outlined"
-                density="compact"
-              />
+                 <v-text-field
+                   v-model="form.price"
+                   label="成交單價"
+                   type="number"
+                   step="0.01"
+                   variant="outlined"
+                   density="compact"
+                 />
             </v-col>
 
             <v-col cols="12" sm="6" md="3">

@@ -207,14 +207,14 @@ onMounted(() => {
             <v-col cols="12" sm="6" md="3">
               <v-menu v-model="dateMenu" :close-on-content-click="false" :close-on-esc="false">
                 <template #activator="{ props }">
-                  <v-text-field
-                    v-model="form.payDate"
-                    label="發放日期 *"
-                    variant="outlined"
-                    density="compact"
-                    readonly
-                    v-bind="props"
-                  />
+                   <v-text-field
+                     v-model="form.payDate"
+                     label="發放日期"
+                     variant="outlined"
+                     density="compact"
+                     readonly
+                     v-bind="props"
+                   />
                 </template>
                 <v-date-picker v-model="form.payDatePicker" hide-title color="primary">
                   <template #actions>
@@ -242,33 +242,33 @@ onMounted(() => {
 
             <v-col cols="12" sm="6" md="3">
               <v-select
-                v-model="form.category"
-                :items="[{ title: '現金股利', value: 'cash' }, { title: '股票股利', value: 'stock' }]"
-                label="類別 *"
-                variant="outlined"
-                density="compact"
-              />
+                 v-model="form.category"
+                 :items="[{ title: '現金股利', value: 'cash' }, { title: '股票股利', value: 'stock' }]"
+                 label="類別"
+                 variant="outlined"
+                 density="compact"
+               />
+            </v-col>
+
+            <v-col cols="12" sm="6" md="3">
+               <v-text-field
+                 v-model="form.shares"
+                 label="基準日持有股數"
+                 type="number"
+                 variant="outlined"
+                 density="compact"
+               />
             </v-col>
 
             <v-col cols="12" sm="6" md="3">
               <v-text-field
-                v-model="form.shares"
-                label="基準日持有股數 *"
-                type="number"
-                variant="outlined"
-                density="compact"
-              />
-            </v-col>
-
-            <v-col cols="12" sm="6" md="3">
-              <v-text-field
-                v-model="form.perShare"
-                label="每股股利 *"
-                type="number"
-                step="0.01"
-                variant="outlined"
-                density="compact"
-              />
+                 v-model="form.perShare"
+                 label="每股股利"
+                 type="number"
+                 step="0.01"
+                 variant="outlined"
+                 density="compact"
+               />
             </v-col>
 
             <v-col sm="6" md="3">
