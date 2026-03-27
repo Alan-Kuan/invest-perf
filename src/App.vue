@@ -59,7 +59,7 @@ const handleClear = async () => {
   <v-app>
     <v-navigation-drawer app color="#1a1a2e">
       <div class="pa-4">
-        <div class="text-h5 text-primary font-weight-bold mb-4">投資績效</div>
+        <div class="text-h5 text-accent font-weight-bold mb-4">投資績效</div>
 
         <v-divider class="mb-4" />
 
