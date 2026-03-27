@@ -11,8 +11,6 @@ It covers build/lint/test commands, code style guidelines, and development pract
 5. [Git Workflow](#git-workflow)
 6. [Additional Notes](#additional-notes)
 
----
-
 ## Project Overview
 
 This is a TypeScript project managed with pnpm.
@@ -49,8 +47,6 @@ The project is a Vue 3 investment performance tracking web app.
 - Dates displayed as `YYYY/MM/DD` (display format)
 - Input uses native date pickers (returns `YYYY-MM-DD`)
 
----
-
 ## Development Commands
 
 ### Package Management
@@ -80,8 +76,6 @@ The project is a Vue 3 investment performance tracking web app.
 - Validate commit messages: `pnpm run validate-commit`
 
 > **Note**: Since the project uses pnpm, all scripts should be executed with `pnpm run` unless otherwise specified.
-
----
 
 ## Code Style Guidelines
 
@@ -134,7 +128,8 @@ The project is a Vue 3 investment performance tracking web app.
 - Props: `camelCase` in declaration, `kebab-case` in templates
 - Custom hooks start with `use`
 
----
+## Rules
+- Do not revert changes that differ from previous requests, as they may be the user's later modifications
 
 ## Testing Practices
 
@@ -143,8 +138,6 @@ The project is a Vue 3 investment performance tracking web app.
 - Assertion library: Expect (built-in with Vitest)
 
 > **Note**: Testing is not currently set up in this project.
-
----
 
 ## Git Workflow
 
@@ -165,7 +158,24 @@ The project is a Vue 3 investment performance tracking web app.
 - Keep subject line under 50 characters
 - Reference issue numbers when applicable
 
----
+#### Creating Commits
+When asked to create a commit:
+1. Analyze the current changes to determine what was modified
+2. Write a descriptive commit message following conventional commits format
+3. Always include the following Co-authored-by trailer:
+   ```
+   Co-authored-by: OpenCode <opencode@users.noreply.github.com>
+   ```
+4. Example commit structure:
+   ```
+   feat: add date picker confirm buttons
+
+   - Modified v-menu to prevent auto-close
+   - Added confirm buttons using v-date-picker #actions slot
+   - Applied accent color to selected dates
+
+   Co-authored-by: OpenCode <opencode@users.noreply.github.com>
+   ```
 
 ## Additional Notes
 
