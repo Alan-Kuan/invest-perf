@@ -524,7 +524,7 @@ onMounted(() => {
               <th class="text-right font-semibold text-grey-darken-1">手續費</th>
               <th class="text-right font-semibold text-grey-darken-1">交易稅</th>
               <th class="text-right font-semibold text-grey-darken-1">淨收付</th>
-              <th class="text-left font-semibold text-grey-darken-1">操作</th>
+              <th class="text-center font-semibold text-grey-darken-1">操作</th>
             </tr>
           </thead>
           <tbody>
@@ -547,7 +547,7 @@ onMounted(() => {
               <td class="text-right" :class="t.net_amount === 0 ? 'text-grey' : (t.type === 'buy' ? 'text-error' : 'text-success')">
                 {{ t.net_amount === 0 ? '-' : (t.type === 'buy' ? '-' : '+') }}{{ Math.abs(t.net_amount).toLocaleString() }}
               </td>
-              <td>
+              <td class="text-center">
                 <v-btn color="error" size="small" variant="text" @click="handleDelete(t.id)">
                   刪除
                 </v-btn>

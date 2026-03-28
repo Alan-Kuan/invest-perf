@@ -431,7 +431,7 @@ onMounted(() => {
               <th class="text-right font-semibold text-grey-darken-1">每股股利</th>
               <th class="text-right font-semibold text-grey-darken-1">匯費</th>
               <th class="text-right font-semibold text-grey-darken-1">實發股利</th>
-              <th class="text-left font-semibold text-grey-darken-1">操作</th>
+              <th class="text-center font-semibold text-grey-darken-1">操作</th>
             </tr>
           </thead>
           <tbody>
@@ -450,7 +450,7 @@ onMounted(() => {
               <td class="text-right">{{ d.per_share.toLocaleString() }}</td>
               <td class="text-right">{{ d.fee.toLocaleString() }}</td>
               <td class="text-right text-success">{{ d.amount.toLocaleString() }}</td>
-              <td>
+              <td class="text-center">
                 <v-btn color="error" size="small" variant="text" @click="handleDelete(d.id)">
                   刪除
                 </v-btn>

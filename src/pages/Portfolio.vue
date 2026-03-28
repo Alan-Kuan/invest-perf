@@ -169,7 +169,7 @@ onMounted(() => {
               <th class="text-right font-semibold text-grey-darken-1">市値</th>
               <th class="text-right font-semibold text-grey-darken-1">未實現損益</th>
               <th class="text-right font-semibold text-grey-darken-1">報酬率</th>
-              <th class="text-left font-semibold text-grey-darken-1">操作</th>
+              <th class="text-center font-semibold text-grey-darken-1">操作</th>
             </tr>
           </thead>
           <tbody>
@@ -214,7 +214,7 @@ onMounted(() => {
               >
                 {{ (h.unrealizedGainPercent || 0) >= 0 ? '+' : '' }}{{ (h.unrealizedGainPercent || 0).toFixed(2) }}%
               </td>
-              <td>
+              <td class="text-center">
                 <v-btn
                   v-if="editingPrice === h.ticker"
                   color="success"
