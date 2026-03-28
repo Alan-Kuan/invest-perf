@@ -295,19 +295,6 @@ onMounted(() => {
         </div>
       </v-card-text>
     </v-card>
-
-    <v-card v-if="yearlyDividends.length > 0" class="rounded-lg" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
-      <v-card-item class="text-base font-semibold pb-2">歷年股利</v-card-item>
-      <v-card-text>
-        <div class="grid gap-3" style="grid-template-columns: repeat(auto-fill, minmax(120px, 1fr))">
-          <div v-for="y in yearlyDividends" :key="y.year" class="bg-grey-lighten-4 p-4 rounded-lg">
-            <div class="font-semibold text-grey-darken-3">{{ y.year }}</div>
-            <div class="text-xl font-bold text-success">{{ String(y.cash_dividend).toLocaleString() }}</div>
-            <div class="text-xs text-grey">{{ y.count }} 筆</div>
-          </div>
-        </div>
-      </v-card-text>
-    </v-card>
   </div>
 </template>
 
