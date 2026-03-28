@@ -2,14 +2,27 @@
 import { ref, onMounted, computed, watch } from 'vue';
 import { useDatabase } from '../composables/useDatabase';
 import { useTransactions, type TransactionInput } from '../composables/useTransactions';
+import { useStockList } from '../composables/useStockList';
 import StockSearch from '../components/StockSearch.vue';
 import { exportToCsv, parseCsv } from '../utils/csv';
 
 const { isReady } = useDatabase();
 const { transactions, loadTransactions, addTransaction, deleteTransaction } = useTransactions();
+const { loadStockList } = useStockList();
 
 const fileInput = ref<HTMLInputElement | null>(null);
 const importLoading = ref(false);
+const updatingStocks = ref(false);
+const snackbar = ref(false);
+const snackbarText = ref('');
+
+const updateStockList = async () => {
+  updatingStocks.value = true;
+  await loadStockList();
+  updatingStocks.value = false;
+  snackbarText.value = '已更新商品代號資料庫';
+  snackbar.value = true;
+};
 
 const exportCsv = () => {
   const data = transactions.value.map(t => ({
@@ -283,7 +296,18 @@ onMounted(() => {
 
 <template>
   <div>
-    <h2 class="text-headline-small mb-4">交易紀錄</h2>
+    <div class="d-flex align-center mb-4">
+      <h2 class="text-headline-small">交易紀錄</h2>
+      <v-btn
+        class="ml-auto"
+        variant="tonal"
+        size="small"
+        :loading="updatingStocks"
+        @click="updateStockList"
+      >
+        更新商品代號資料庫
+      </v-btn>
+    </div>
 
     <v-card class="mb-4 rounded-lg" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
       <v-card-item class="text-base font-semibold pb-2">新增交易</v-card-item>
@@ -562,6 +586,10 @@ onMounted(() => {
         </v-table>
       </v-card-text>
     </v-card>
+
+    <v-snackbar v-model="snackbar" location="bottom right" :timeout="3000" color="success">
+      {{ snackbarText }}
+    </v-snackbar>
   </div>
 </template>
 

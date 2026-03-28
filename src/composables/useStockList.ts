@@ -34,27 +34,48 @@ export function useStockList() {
     }
 
     try {
-      const response = await fetch('/api/twse/v1/exchangeReport/BWIBBU_d');
-      const data = await response.json();
+      const [stockResponse, etfResponse] = await Promise.all([
+        fetch('/api/twse/v1/exchangeReport/BWIBBU_d'),
+        fetch('/api/twse/v1/exchangeReport/TWT53U')
+      ]);
 
-      if (Array.isArray(data)) {
-        const stocks: Stock[] = data.map(item => ({
-          ticker: item.Code,
-          name: item.Name
-        }));
+      const [stockData, etfData] = await Promise.all([
+        stockResponse.json(),
+        etfResponse.json()
+      ]);
 
-        if (db && stocks.length > 0) {
-          db.run('DELETE FROM stocks');
-          const stmt = db.prepare('INSERT INTO stocks (ticker, name) VALUES (?, ?)');
-          for (const stock of stocks) {
-            stmt.run([stock.ticker, stock.name]);
-          }
-          stmt.free();
-          await saveDatabase();
+      const stockMap = new Map<string, string>();
+
+      if (Array.isArray(stockData)) {
+        for (const item of stockData) {
+          stockMap.set(item.Code, item.Name);
         }
-
-        stockList.value = stocks;
       }
+
+      if (Array.isArray(etfData)) {
+        for (const item of etfData) {
+          if (!stockMap.has(item.Code)) {
+            stockMap.set(item.Code, item.Name);
+          }
+        }
+      }
+
+      const stocks: Stock[] = Array.from(stockMap.entries()).map(([ticker, name]) => ({
+        ticker,
+        name
+      }));
+
+      if (db && stocks.length > 0) {
+        db.run('DELETE FROM stocks');
+        const stmt = db.prepare('INSERT INTO stocks (ticker, name) VALUES (?, ?)');
+        for (const stock of stocks) {
+          stmt.run([stock.ticker, stock.name]);
+        }
+        stmt.free();
+        await saveDatabase();
+      }
+
+      stockList.value = stocks;
     } catch (e) {
       console.error('Failed to fetch stock list:', e);
     }
