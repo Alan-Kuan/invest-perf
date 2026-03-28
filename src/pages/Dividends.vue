@@ -17,7 +17,7 @@ const exportCsv = () => {
     代號: d.ticker,
     名稱: d.name,
     類別: d.category === 'cash' ? '現金股利' : '股票股利',
-    持有股數: d.shares,
+    基準日持有股數: d.shares,
     每股股利: d.per_share,
     匯費: d.fee,
     實發股利: d.amount
@@ -428,7 +428,7 @@ onMounted(() => {
               <th class="text-left font-semibold text-grey-darken-1">發放日</th>
               <th class="text-left font-semibold text-grey-darken-1">商品</th>
               <th class="text-left font-semibold text-grey-darken-1">類別</th>
-              <th class="text-right font-semibold text-grey-darken-1">持有股數</th>
+              <th class="text-right font-semibold text-grey-darken-1">基準日持有股數</th>
               <th class="text-right font-semibold text-grey-darken-1">每股股利</th>
               <th class="text-right font-semibold text-grey-darken-1">匯費</th>
               <th class="text-right font-semibold text-grey-darken-1">實發股利</th>
