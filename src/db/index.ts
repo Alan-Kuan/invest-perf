@@ -9,13 +9,6 @@ const IDB_VERSION = 4;
 
 let idbInstance: IDBDatabase | null = null;
 
-async function initSqlJsWithWasm(): Promise<Database> {
-  const SQL: SqlJsStatic = await initSqlJs({
-    locateFile: () => '/sql-wasm.wasm'
-  });
-  return new SQL.Database();
-}
-
 function openIndexedDB(): Promise<IDBDatabase> {
   if (idbInstance) return Promise.resolve(idbInstance);
 

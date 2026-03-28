@@ -17,7 +17,7 @@ export interface Transaction {
   created_at?: string;
 }
 
-export interface TransactionFilters {
+interface TransactionFilters {
   ticker?: string;
   type?: string;
   startDate?: string;

@@ -15,7 +15,7 @@ export interface Dividend {
   created_at?: string;
 }
 
-export interface DividendFilters {
+interface DividendFilters {
   ticker?: string;
   category?: string;
   year?: string;

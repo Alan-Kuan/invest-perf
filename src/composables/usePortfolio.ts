@@ -12,7 +12,7 @@ export interface Holding {
   unrealizedGainPercent?: number;
 }
 
-export interface PriceData {
+interface PriceData {
   [ticker: string]: number;
 }
 

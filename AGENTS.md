@@ -31,7 +31,6 @@ The project is a Vue 3 investment performance tracking web app.
 - `usePortfolio`: Portfolio holdings and P/L calculations
 - `useStockList`: Stock search with autocomplete (loads from TWSE API)
 - `useStockPrice`: Real-time stock price fetching
-- `useBackup`: Database backup/restore
 
 ### Database
 - Uses sql.js WASM version for SQLite in browser

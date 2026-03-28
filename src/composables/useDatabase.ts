@@ -7,24 +7,16 @@ interface QueryResult {
 }
 
 const isReady = ref(false);
-const isLoading = ref(false);
-const error = ref<string | null>(null);
 
 export function useDatabase() {
   const init = async (): Promise<void> => {
     if (isReady.value) return;
 
-    isLoading.value = true;
-    error.value = null;
-
     try {
       await initDatabase();
       isReady.value = true;
     } catch (e) {
-      error.value = e instanceof Error ? e.message : 'Unknown error';
       console.error('Database init error:', e);
-    } finally {
-      isLoading.value = false;
     }
   };
 
@@ -105,8 +97,6 @@ export function useDatabase() {
 
   return {
     isReady,
-    isLoading,
-    error,
     init,
     query,
     execute,
