@@ -23,34 +23,38 @@ interface PortfolioSummary {
   totalCost: number;
   totalValue: number;
   totalUnrealized: number;
-  totalGain: number;
-  realizedGain: number;
 }
 
 const summary = ref<PortfolioSummary>({
   holdings: [],
   totalCost: 0,
   totalValue: 0,
-  totalUnrealized: 0,
-  totalGain: 0,
-  realizedGain: 0
+  totalUnrealized: 0
 });
 
-const editingPrice = ref<string | null>(null);
-const newPrice = ref('');
 const isLoadingPrices = ref(false);
 const lastUpdate = ref<string | null>(null);
 const tickerDistribution = ref<DistributionData[]>([]);
 
 const loadData = () => {
-  summary.value = getPortfolioSummary();
+  const data = getPortfolioSummary();
+  const holdings = data.holdings.filter(h => h.shares > 0);
+  
+  const totalCost = holdings.reduce((sum, h) => sum + h.total_cost, 0);
+  const totalValue = holdings.reduce((sum, h) => sum + (h.currentPrice || h.avg_cost) * h.shares, 0);
+  const totalUnrealized = holdings.reduce((sum, h) => sum + (h.unrealizedGain || 0), 0);
+  
+  summary.value = {
+    holdings,
+    totalCost,
+    totalValue,
+    totalUnrealized
+  };
   loadTickerDistribution();
 };
 
 const loadTickerDistribution = () => {
-  const holdings = summary.value.holdings.filter(h => h.shares > 0);
-
-  tickerDistribution.value = holdings.map(h => ({
+  tickerDistribution.value = summary.value.holdings.map(h => ({
     ticker: h.ticker,
     name: h.name,
     value: (h.currentPrice || h.avg_cost) * h.shares
@@ -112,26 +116,6 @@ const fetchAllPrices = async () => {
   }
 };
 
-const startEditPrice = (ticker: string, currentPrice?: number) => {
-  editingPrice.value = ticker;
-  newPrice.value = currentPrice?.toString() || '';
-};
-
-const savePrice = (ticker: string) => {
-  const price = parseFloat(newPrice.value);
-  if (price > 0) {
-    updatePrice(ticker, price);
-    loadData();
-  }
-  editingPrice.value = null;
-  newPrice.value = '';
-};
-
-const cancelEdit = () => {
-  editingPrice.value = null;
-  newPrice.value = '';
-};
-
 watch(isReady, (ready) => {
   if (ready) {
     loadData();
@@ -163,7 +147,7 @@ onMounted(() => {
     </div>
 
     <v-row class="mb-4" align="stretch">
-      <v-col sm="6" md="4" lg="2">
+      <v-col sm="6" md="4">
         <v-card class="rounded-lg h-full" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
           <v-card-text>
             <div class="text-body-small text-grey">總成本</div>
@@ -171,7 +155,7 @@ onMounted(() => {
           </v-card-text>
         </v-card>
       </v-col>
-      <v-col sm="6" md="4" lg="2">
+      <v-col sm="6" md="4">
         <v-card class="rounded-lg h-full" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
           <v-card-text>
             <div class="text-body-small text-grey">總市值</div>
@@ -179,32 +163,12 @@ onMounted(() => {
           </v-card-text>
         </v-card>
       </v-col>
-      <v-col sm="6" md="4" lg="2">
+      <v-col sm="6" md="4">
         <v-card class="rounded-lg h-full" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
           <v-card-text>
             <div class="text-body-small text-grey">未實現損益</div>
             <div class="text-xl font-weight-bold" :class="summary.totalUnrealized >= 0 ? 'text-success' : 'text-error'">
               {{ summary.totalUnrealized >= 0 ? '+' : '' }}{{ summary.totalUnrealized.toLocaleString() }}
-            </div>
-          </v-card-text>
-        </v-card>
-      </v-col>
-      <v-col sm="6" md="4" lg="2">
-        <v-card class="rounded-lg h-full" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
-          <v-card-text>
-            <div class="text-body-small text-grey">已實現損益</div>
-            <div class="text-xl font-weight-bold" :class="summary.realizedGain >= 0 ? 'text-success' : 'text-error'">
-              {{ summary.realizedGain >= 0 ? '+' : '' }}{{ summary.realizedGain.toLocaleString() }}
-            </div>
-          </v-card-text>
-        </v-card>
-      </v-col>
-      <v-col sm="12" md="4" lg="2">
-        <v-card class="rounded-lg h-full" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
-          <v-card-text>
-            <div class="text-body-small text-grey">總損益</div>
-            <div class="text-xl font-weight-bold" :class="summary.totalGain >= 0 ? 'text-success' : 'text-error'">
-              {{ summary.totalGain >= 0 ? '+' : '' }}{{ summary.totalGain.toLocaleString() }}
             </div>
           </v-card-text>
         </v-card>
@@ -240,7 +204,6 @@ onMounted(() => {
               <th class="text-right font-semibold text-grey-darken-1">市値</th>
               <th class="text-right font-semibold text-grey-darken-1">未實現損益</th>
               <th class="text-right font-semibold text-grey-darken-1">報酬率</th>
-              <th class="text-center font-semibold text-grey-darken-1">操作</th>
             </tr>
           </thead>
           <tbody>
@@ -250,26 +213,7 @@ onMounted(() => {
               <td class="text-right">{{ h.shares.toLocaleString() }}</td>
               <td class="text-right">{{ h.avg_cost?.toLocaleString() }}</td>
               <td class="text-right">{{ h.total_cost?.toLocaleString() }}</td>
-              <td class="text-right">
-                <v-text-field
-                  v-if="editingPrice === h.ticker"
-                  v-model="newPrice"
-                  type="number"
-                  variant="outlined"
-                  density="compact"
-                  hide-details
-                  class="price-input"
-                  @keyup.enter="savePrice(h.ticker)"
-                  @keyup.escape="cancelEdit"
-                />
-                <span
-                  v-else
-                  class="editable-price"
-                  @click="startEditPrice(h.ticker, h.currentPrice)"
-                >
-                  {{ h.currentPrice?.toLocaleString() || '點擊設定' }}
-                </span>
-              </td>
+              <td class="text-right">{{ h.currentPrice?.toLocaleString() || '-' }}</td>
               <td class="text-right">
                 {{ ((h.currentPrice || h.avg_cost) * h.shares).toLocaleString() }}
               </td>
@@ -285,33 +229,13 @@ onMounted(() => {
               >
                 {{ (h.unrealizedGainPercent || 0) >= 0 ? '+' : '' }}{{ (h.unrealizedGainPercent || 0).toFixed(2) }}%
               </td>
-              <td class="text-center">
-                <v-btn
-                  v-if="editingPrice === h.ticker"
-                  color="success"
-                  size="small"
-                  variant="text"
-                  @click="savePrice(h.ticker)"
-                >
-                  儲存
-                </v-btn>
-                <v-btn
-                  v-if="editingPrice === h.ticker"
-                  color="grey"
-                  size="small"
-                  variant="text"
-                  @click="cancelEdit"
-                >
-                  取消
-                </v-btn>
-              </td>
             </tr>
             <tr v-if="summary.holdings.length === 0">
-              <td colspan="10" class="text-center text-grey pa-4">尚無持有部位</td>
+              <td colspan="9" class="text-center text-grey pa-4">尚無持有部位</td>
             </tr>
           </tbody>
         </v-table>
-        <div class="text-body-small text-grey mt-2">* 系統會自動抓取 TWSE 即時報價，或點擊現價手動設定</div>
+        <div class="text-body-small text-grey mt-2">* 系統會自動抓取 TWSE 即時報價</div>
       </v-card-text>
     </v-card>
   </div>
@@ -324,20 +248,5 @@ onMounted(() => {
 
 .summary-highlight .text-body-small {
   color: #aaa;
-}
-
-.editable-price {
-  cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 4px;
-  transition: background 0.2s;
-}
-
-.editable-price:hover {
-  background: #e3f2fd;
-}
-
-.price-input {
-  max-width: 100px;
 }
 </style>
