@@ -39,11 +39,11 @@ const tickerDistribution = ref<DistributionData[]>([]);
 const loadData = () => {
   const data = getPortfolioSummary();
   const holdings = data.holdings.filter(h => h.shares > 0);
-  
+
   const totalCost = holdings.reduce((sum, h) => sum + h.total_cost, 0);
   const totalValue = holdings.reduce((sum, h) => sum + (h.currentPrice || h.avg_cost) * h.shares, 0);
   const totalUnrealized = holdings.reduce((sum, h) => sum + (h.unrealizedGain || 0), 0);
-  
+
   summary.value = {
     holdings,
     totalCost,
@@ -136,12 +136,13 @@ onMounted(() => {
       <div class="d-flex align-center">
         <span v-if="lastUpdate" class="text-grey mr-4">更新時間: {{ lastUpdate }}</span>
         <v-btn
-          color="primary"
+          variant="tonal"
+          size="small"
           :loading="isLoadingPrices"
-          @click="fetchAllPrices"
           :disabled="summary.holdings.length === 0"
+          @click="fetchAllPrices"
         >
-          更新報價
+          更新現價
         </v-btn>
       </div>
     </div>
