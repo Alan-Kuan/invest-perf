@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from 'vue';
+import { ref, onMounted, computed, watch, inject } from 'vue';
 import { useDatabase } from '../composables/useDatabase';
 import { useTransactions, type TransactionInput } from '../composables/useTransactions';
 import { useStockList } from '../composables/useStockList';
@@ -9,19 +9,18 @@ import { exportToCsv, parseCsv } from '../utils/csv';
 const { isReady } = useDatabase();
 const { transactions, loadTransactions, addTransaction, deleteTransaction } = useTransactions();
 const { loadStockList } = useStockList();
+const showSnackbar = inject<(text: string, color?: string) => void>('showSnackbar');
+const showConfirm = inject<(message: string) => Promise<boolean>>('showConfirm');
 
 const fileInput = ref<HTMLInputElement | null>(null);
 const importLoading = ref(false);
 const updatingStocks = ref(false);
-const snackbar = ref(false);
-const snackbarText = ref('');
 
 const updateStockList = async () => {
   updatingStocks.value = true;
   await loadStockList();
   updatingStocks.value = false;
-  snackbarText.value = '已更新商品代號資料庫';
-  snackbar.value = true;
+  showSnackbar?.('已更新商品代號資料庫');
 };
 
 const exportCsv = () => {
@@ -81,11 +80,11 @@ const handleFileImport = async (event: Event) => {
       }
     }
 
-    alert(`匯入成功：${imported} 筆`);
+    showSnackbar?.(`匯入成功：${imported} 筆`);
     loadTransactions(filters.value);
   } catch (e) {
     console.error('Import error:', e);
-    alert('匯入失敗');
+    showSnackbar?.('匯入失敗', 'error');
   } finally {
     importLoading.value = false;
     target.value = '';
@@ -227,7 +226,7 @@ const computedNetAmount = computed(() => {
 
 const submitForm = () => {
   if (!form.value.date || !form.value.ticker || !form.value.shares || !form.value.price) {
-    alert('請填寫必填欄位');
+    showSnackbar?.('請填寫必填欄位', 'warning');
     return;
   }
 
@@ -274,8 +273,8 @@ const clearFilters = () => {
   loadTransactions();
 };
 
-const handleDelete = (id: string) => {
-  if (confirm('確定要刪除這筆紀錄嗎？')) {
+const handleDelete = async (id: string) => {
+  if (await showConfirm?.('確定要刪除這筆紀錄嗎？')) {
     deleteTransaction(id);
     loadTransactions(filters.value);
   }
@@ -587,9 +586,6 @@ onMounted(() => {
       </v-card-text>
     </v-card>
 
-    <v-snackbar v-model="snackbar" location="bottom right" :timeout="3000" color="success">
-      {{ snackbarText }}
-    </v-snackbar>
   </div>
 </template>
 

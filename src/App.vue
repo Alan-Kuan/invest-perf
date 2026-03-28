@@ -1,12 +1,44 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { onMounted } from 'vue';
+import { onMounted, provide } from 'vue';
 import { useDatabase } from './composables/useDatabase';
 
 const { init, exportData, importData, clear } = useDatabase();
 
 const fileInput = ref<HTMLInputElement | null>(null);
 const isImporting = ref(false);
+
+const snackbar = ref(false);
+const snackbarText = ref('');
+const snackbarColor = ref('success');
+
+const showSnackbar = (text: string, color: string = 'success') => {
+  snackbarText.value = text;
+  snackbarColor.value = color;
+  snackbar.value = true;
+};
+
+provide('showSnackbar', showSnackbar);
+
+const confirmDialog = ref(false);
+const confirmMessage = ref('');
+const confirmResolve = ref<((value: boolean) => void) | null>(null);
+
+const showConfirm = (message: string): Promise<boolean> => {
+  confirmMessage.value = message;
+  confirmDialog.value = true;
+  return new Promise((resolve) => {
+    confirmResolve.value = resolve;
+  });
+};
+
+provide('showConfirm', showConfirm);
+
+const handleConfirm = (result: boolean) => {
+  confirmDialog.value = false;
+  confirmResolve.value?.(result);
+  confirmResolve.value = null;
+};
 
 onMounted(async () => {
   await init();
@@ -25,7 +57,7 @@ const handleFileChange = async (event: Event) => {
   const file = target.files?.[0];
   if (!file) return;
 
-  if (!confirm('匯入會取代現有資料，確定要繼續嗎？')) {
+  if (!(await showConfirm('匯入會取代現有資料，確定要繼續嗎？'))) {
     target.value = '';
     return;
   }
@@ -35,18 +67,18 @@ const handleFileChange = async (event: Event) => {
     await importData(file);
     window.location.reload();
   } catch (e) {
-    alert('匯入失敗: ' + (e as Error).message);
+    showSnackbar('匯入失敗: ' + (e as Error).message, 'error');
     isImporting.value = false;
   }
   target.value = '';
 };
 
 const handleClear = async () => {
-  if (!confirm('確定要清除所有資料嗎？此操作無法復原！')) {
+  if (!(await showConfirm('確定要清除所有資料嗎？此操作無法復原！'))) {
     return;
   }
 
-  if (!confirm('再次確認：所有交易、股利、持股資料都會被刪除！')) {
+  if (!(await showConfirm('再次確認：所有交易、股利、持股資料都會被刪除！'))) {
     return;
   }
 
@@ -100,5 +132,21 @@ const handleClear = async () => {
         <router-view />
       </v-container>
     </v-main>
+
+    <v-snackbar v-model="snackbar" location="bottom right" :color="snackbarColor" :timeout="3000">
+      {{ snackbarText }}
+    </v-snackbar>
+
+    <v-dialog v-model="confirmDialog" max-width="400">
+      <v-card>
+        <v-card-title>確認</v-card-title>
+        <v-card-text>{{ confirmMessage }}</v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="handleConfirm(false)">取消</v-btn>
+          <v-btn color="primary" variant="flat" @click="handleConfirm(true)">確定</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-app>
 </template>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from 'vue';
+import { ref, onMounted, computed, watch, inject } from 'vue';
 import { useDatabase } from '../composables/useDatabase';
 import { useDividends, type DividendInput } from '../composables/useDividends';
 import StockSearch from '../components/StockSearch.vue';
@@ -7,6 +7,8 @@ import { exportToCsv, parseCsv } from '../utils/csv';
 
 const { isReady } = useDatabase();
 const { dividends, loadDividends, addDividend, deleteDividend, getYearlyStats } = useDividends();
+const showSnackbar = inject<(text: string, color?: string) => void>('showSnackbar');
+const showConfirm = inject<(message: string) => Promise<boolean>>('showConfirm');
 
 const fileInput = ref<HTMLInputElement | null>(null);
 const importLoading = ref(false);
@@ -64,12 +66,12 @@ const handleFileImport = async (event: Event) => {
       }
     }
 
-    alert(`匯入成功：${imported} 筆`);
+    showSnackbar?.(`匯入成功：${imported} 筆`);
     loadDividends(filters.value);
     loadYearlyStats();
   } catch (e) {
     console.error('Import error:', e);
-    alert('匯入失敗');
+    showSnackbar?.('匯入失敗', 'error');
   } finally {
     importLoading.value = false;
     target.value = '';
@@ -158,7 +160,7 @@ const yearlyStats = ref<YearlyStat[]>([]);
 
 const submitForm = () => {
   if (!form.value.payDate || !form.value.ticker || !form.value.shares || !form.value.perShare) {
-    alert('請填寫必填欄位');
+    showSnackbar?.('請填寫必填欄位', 'warning');
     return;
   }
 
@@ -196,8 +198,8 @@ const clearFilters = () => {
   loadDividends();
 };
 
-const handleDelete = (id: string) => {
-  if (confirm('確定要刪除這筆紀錄嗎？')) {
+const handleDelete = async (id: string) => {
+  if (await showConfirm?.('確定要刪除這筆紀錄嗎？')) {
     deleteDividend(id);
     loadDividends(filters.value);
     loadYearlyStats();
