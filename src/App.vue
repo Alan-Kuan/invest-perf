@@ -59,7 +59,7 @@ const handleClear = async () => {
   <v-app>
     <v-navigation-drawer app color="#1a1a2e">
       <div class="pa-4">
-        <div class="text-h5 text-accent font-weight-bold mb-4">投資績效</div>
+        <div class="text-title-large text-accent font-weight-bold mb-4">投資績效</div>
 
         <v-divider class="mb-4" />
 
@@ -74,7 +74,7 @@ const handleClear = async () => {
       <template #append>
         <div class="pa-4">
           <v-divider class="mb-4" />
-          <div class="text-caption text-grey mb-2">資料管理</div>
+          <div class="text-body-small text-grey mb-2">資料管理</div>
           <v-list nav density="compact">
             <v-list-item @click="handleExport" prepend-icon="mdi-download" title="匯出資料庫" density="compact" class="mb-1 rounded-lg px-2" />
             <v-list-item @click="handleImportClick" prepend-icon="mdi-upload" :disabled="isImporting" density="compact" class="mb-1 rounded-lg px-2">

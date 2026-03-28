@@ -25,8 +25,7 @@ export const vuetify = createVuetify({
   },
   defaults: {
     VCard: {
-      variant: 'flat',
-      elevation: 2
+      variant: 'flat'
     },
     VBtn: {
       variant: 'flat'

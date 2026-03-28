@@ -239,13 +239,13 @@ onMounted(() => {
 
 <template>
   <div>
-    <h2 class="text-h4 mb-4">股利記錄</h2>
+    <h2 class="text-headline-small mb-4">股利記錄</h2>
 
     <v-row class="mb-4" align="stretch">
       <v-col sm="4">
         <v-card class="rounded-lg h-full" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
           <v-card-text>
-            <div class="text-caption text-grey">實發股利總計</div>
+            <div class="text-body-small text-grey">實發股利總計</div>
             <div class="text-xl font-weight-bold text-success">{{ totalDividend.toLocaleString() }}</div>
           </v-card-text>
         </v-card>
@@ -253,7 +253,7 @@ onMounted(() => {
       <v-col sm="4">
         <v-card class="rounded-lg h-full" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
           <v-card-text>
-            <div class="text-caption text-grey">現金股利</div>
+            <div class="text-body-small text-grey">現金股利</div>
             <div class="text-xl font-weight-bold">{{ totalCash.toLocaleString() }}</div>
           </v-card-text>
         </v-card>
@@ -261,7 +261,7 @@ onMounted(() => {
       <v-col sm="4">
         <v-card class="rounded-lg h-full" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
           <v-card-text>
-            <div class="text-caption text-grey">股票股利</div>
+            <div class="text-body-small text-grey">股票股利</div>
             <div class="text-xl font-weight-bold">{{ totalStock.toLocaleString() }}</div>
           </v-card-text>
         </v-card>
@@ -352,10 +352,10 @@ onMounted(() => {
 
             <v-col class="d-flex justify-end align-center">
               <div class="d-flex align-baseline mr-6">
-                <div class="mr-2 text-grey text-[1.125rem]">實發股利</div>
+                <div class="mr-2 text-grey text-body-large">實發股利</div>
                 <div
                   :class="computedAmount === 0 ? 'text-grey' : 'text-success'"
-                  class="text-2xl font-weight-bold"
+                  class="text-body-extra-large font-weight-bold"
                 >
                   {{ computedAmount === 0 ? '$' : '+$' }}{{ computedAmount.toLocaleString() }}
                 </div>
@@ -439,7 +439,7 @@ onMounted(() => {
               <td>{{ formatDate(d.pay_date) }}</td>
               <td>
                 <div class="font-weight-bold">{{ d.ticker }}</div>
-                <div class="text-caption text-grey">{{ d.name }}</div>
+                <div class="text-body-small text-grey">{{ d.name }}</div>
               </td>
               <td>
                 <v-chip :color="d.category === 'cash' ? 'success' : 'orange'" size="small" class="text-xs">
@@ -464,12 +464,12 @@ onMounted(() => {
 
         <v-card v-if="yearlyStats.length > 0" variant="flat" class="mt-4 bg-grey-lighten-4 rounded-lg">
           <v-card-text>
-            <div class="text-subtitle-2 mb-2">年度統計</div>
+            <div class="text-title-small mb-2">年度統計</div>
             <v-row>
               <v-col v-for="s in yearlyStats" :key="s.year" sm="4" md="2">
-                <div class="text-caption text-grey">{{ s.year }}</div>
-                <div class="text-h6 text-success">{{ String(s.cash_dividend).toLocaleString() }}</div>
-                <div class="text-caption text-grey">{{ s.count }} 筆</div>
+                <div class="text-body-small text-grey">{{ s.year }}</div>
+                <div class="text-title-medium text-success">{{ String(s.cash_dividend).toLocaleString() }}</div>
+                <div class="text-body-small text-grey">{{ s.count }} 筆</div>
               </v-col>
             </v-row>
           </v-card-text>

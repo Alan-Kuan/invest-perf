@@ -280,7 +280,7 @@ onMounted(() => {
 
 <template>
   <div>
-    <h2 class="text-h4 mb-4">交易記錄</h2>
+    <h2 class="text-headline-small mb-4">交易記錄</h2>
 
     <v-card class="mb-4 rounded-lg" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
       <v-card-item class="text-base font-semibold pb-2">新增交易</v-card-item>
@@ -401,10 +401,10 @@ onMounted(() => {
           <v-row>
             <v-col class="d-flex justify-end align-center">
               <div class="d-flex align-baseline mr-6">
-                <div class="mr-2 text-grey text-[1.125rem]">淨收付</div>
+                <div class="mr-2 text-grey text-body-large">淨收付</div>
                 <div
                   :class="computedNetAmount === 0 ? 'text-grey' : (form.type === 'buy' ? 'text-error' : 'text-success')"
-                  class="text-2xl font-weight-bold"
+                  class="text-body-extra-large font-weight-bold"
                 >
                   {{ computedNetAmount === 0 ? '$' : (form.type === 'buy' ? '-$' : '+$') }}{{ computedNetAmount.toLocaleString() }}
                 </div>
@@ -532,7 +532,7 @@ onMounted(() => {
               <td>{{ formatDate(t.date) }}</td>
               <td>
                 <div class="font-weight-bold">{{ t.ticker }}</div>
-                <div class="text-caption text-grey">{{ t.name }}</div>
+                <div class="text-body-small text-grey">{{ t.name }}</div>
               </td>
               <td>
                 <v-chip :color="t.type === 'buy' ? 'info' : 'error'" size="small" class="text-xs">

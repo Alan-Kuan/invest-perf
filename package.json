@@ -21,7 +21,6 @@
   },
   "devDependencies": {
     "@types/sql.js": "^1.4.11",
-    "@unocss/preset-mini": "^66.6.7",
     "@vitejs/plugin-vue": "^6.0.5",
     "@vue/tsconfig": "^0.9.1",
     "typescript": "^6.0.2",

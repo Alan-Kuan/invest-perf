@@ -91,7 +91,7 @@ onMounted(() => {
 <template>
   <div>
     <div class="d-flex justify-space-between align-center mb-4">
-      <h2 class="text-h4">投資組合</h2>
+      <h2 class="text-headline-small">投資組合</h2>
       <div class="d-flex align-center">
         <span v-if="lastUpdate" class="text-grey mr-4">更新時間: {{ lastUpdate }}</span>
         <v-btn
@@ -109,7 +109,7 @@ onMounted(() => {
       <v-col sm="6" md="4" lg="2">
         <v-card class="rounded-lg h-full" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
           <v-card-text>
-            <div class="text-caption text-grey">總成本</div>
+            <div class="text-body-small text-grey">總成本</div>
             <div class="text-xl font-weight-bold">{{ summary.totalCost.toLocaleString() }}</div>
           </v-card-text>
         </v-card>
@@ -117,7 +117,7 @@ onMounted(() => {
       <v-col sm="6" md="4" lg="2">
         <v-card class="rounded-lg h-full" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
           <v-card-text>
-            <div class="text-caption text-grey">總市值</div>
+            <div class="text-body-small text-grey">總市值</div>
             <div class="text-xl font-weight-bold">{{ summary.totalValue.toLocaleString() }}</div>
           </v-card-text>
         </v-card>
@@ -125,7 +125,7 @@ onMounted(() => {
       <v-col sm="6" md="4" lg="2">
         <v-card class="rounded-lg h-full" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
           <v-card-text>
-            <div class="text-caption text-grey">未實現損益</div>
+            <div class="text-body-small text-grey">未實現損益</div>
             <div class="text-xl font-weight-bold" :class="summary.totalUnrealized >= 0 ? 'text-success' : 'text-error'">
               {{ summary.totalUnrealized >= 0 ? '+' : '' }}{{ summary.totalUnrealized.toLocaleString() }}
             </div>
@@ -135,7 +135,7 @@ onMounted(() => {
       <v-col sm="6" md="4" lg="2">
         <v-card class="rounded-lg h-full" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
           <v-card-text>
-            <div class="text-caption text-grey">已實現損益</div>
+            <div class="text-body-small text-grey">已實現損益</div>
             <div class="text-xl font-weight-bold" :class="summary.realizedGain >= 0 ? 'text-success' : 'text-error'">
               {{ summary.realizedGain >= 0 ? '+' : '' }}{{ summary.realizedGain.toLocaleString() }}
             </div>
@@ -145,7 +145,7 @@ onMounted(() => {
       <v-col sm="12" md="4" lg="2">
         <v-card class="rounded-lg h-full" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
           <v-card-text>
-            <div class="text-caption text-grey">總損益</div>
+            <div class="text-body-small text-grey">總損益</div>
             <div class="text-xl font-weight-bold" :class="summary.totalGain >= 0 ? 'text-success' : 'text-error'">
               {{ summary.totalGain >= 0 ? '+' : '' }}{{ summary.totalGain.toLocaleString() }}
             </div>
@@ -240,7 +240,7 @@ onMounted(() => {
             </tr>
           </tbody>
         </v-table>
-        <div class="text-caption text-grey mt-2">* 系統會自動抓取 TWSE 即時報價，或點擊現價手動設定</div>
+        <div class="text-body-small text-grey mt-2">* 系統會自動抓取 TWSE 即時報價，或點擊現價手動設定</div>
       </v-card-text>
     </v-card>
   </div>
@@ -251,7 +251,7 @@ onMounted(() => {
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
 }
 
-.summary-highlight .text-caption {
+.summary-highlight .text-body-small {
   color: #aaa;
 }
 
