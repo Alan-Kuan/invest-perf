@@ -95,9 +95,9 @@ interface DividendForm {
   ticker: string;
   name: string;
   category: 'cash' | 'stock';
-  shares: string;
-  perShare: string;
-  fee: string;
+  shares: number;
+  perShare: number;
+  fee: number;
 }
 
 const form = ref<DividendForm>({
@@ -106,9 +106,9 @@ const form = ref<DividendForm>({
   ticker: '',
   name: '',
   category: 'cash',
-  shares: '',
-  perShare: '',
-  fee: ''
+  shares: 0,
+  perShare: 0,
+  fee: 0
 });
 
 const dateMenu = ref(false);
@@ -144,9 +144,9 @@ const filters = ref<DividendFilters>({
 });
 
 const computedAmount = computed(() => {
-  const shares = parseFloat(form.value.shares) || 0;
-  const perShare = parseFloat(form.value.perShare) || 0;
-  const fee = parseFloat(form.value.fee) || 0;
+  const shares = form.value.shares || 0;
+  const perShare = form.value.perShare || 0;
+  const fee = form.value.fee || 0;
   return shares * perShare - fee;
 });
 
@@ -169,9 +169,9 @@ const submitForm = () => {
     ticker: form.value.ticker,
     name: form.value.name,
     category: form.value.category,
-    shares: parseInt(form.value.shares),
-    perShare: parseFloat(form.value.perShare),
-    fee: parseFloat(form.value.fee) || 0
+    shares: form.value.shares,
+    perShare: form.value.perShare,
+    fee: form.value.fee || 0
   });
 
   form.value = {
@@ -180,9 +180,9 @@ const submitForm = () => {
     ticker: '',
     name: '',
     category: 'cash',
-    shares: '',
-    perShare: '',
-    fee: ''
+    shares: 0,
+    perShare: 0,
+    fee: 0
   };
 
   loadDividends(filters.value);
