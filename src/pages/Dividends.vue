@@ -6,7 +6,7 @@ import StockSearch from '../components/StockSearch.vue';
 import { exportToCsv, parseCsv } from '../utils/csv';
 
 const { isReady } = useDatabase();
-const { dividends, loadDividends, addDividend, deleteDividend, getYearlyStats } = useDividends();
+const { dividends, loadDividends, addDividend, deleteDividend } = useDividends();
 const showSnackbar = inject<(text: string, color?: string) => void>('showSnackbar');
 const showConfirm = inject<(message: string) => Promise<boolean>>('showConfirm');
 
@@ -68,7 +68,6 @@ const handleFileImport = async (event: Event) => {
 
     showSnackbar?.(`匯入成功：${imported} 筆`);
     loadDividends(filters.value);
-    loadYearlyStats();
   } catch (e) {
     console.error('Import error:', e);
     showSnackbar?.('匯入失敗', 'error');
@@ -150,14 +149,6 @@ const computedAmount = computed(() => {
   return shares * perShare - fee;
 });
 
-interface YearlyStat {
-  year: string;
-  cash_dividend: number;
-  count: number;
-}
-
-const yearlyStats = ref<YearlyStat[]>([]);
-
 const submitForm = () => {
   if (!form.value.payDate || !form.value.ticker || !form.value.shares || !form.value.perShare) {
     showSnackbar?.('請填寫必填欄位', 'warning');
@@ -186,7 +177,6 @@ const submitForm = () => {
   };
 
   loadDividends(filters.value);
-  loadYearlyStats();
 };
 
 const applyFilters = () => {
@@ -202,12 +192,7 @@ const handleDelete = async (id: string) => {
   if (await showConfirm?.('確定要刪除這筆紀錄嗎？')) {
     deleteDividend(id);
     loadDividends(filters.value);
-    loadYearlyStats();
   }
-};
-
-const loadYearlyStats = () => {
-  yearlyStats.value = getYearlyStats();
 };
 
 const totalDividend = computed(() => {
@@ -229,14 +214,12 @@ const totalStock = computed(() => {
 watch(isReady, (ready) => {
   if (ready) {
     loadDividends();
-    loadYearlyStats();
   }
 });
 
 onMounted(() => {
   if (isReady.value) {
     loadDividends();
-    loadYearlyStats();
   }
 });
 </script>
@@ -465,18 +448,7 @@ onMounted(() => {
           </tbody>
         </v-table>
 
-        <v-card v-if="yearlyStats.length > 0" variant="flat" class="mt-4 bg-grey-lighten-4 rounded-lg">
-          <v-card-text>
-            <div class="text-title-small mb-2">年度統計</div>
-            <v-row>
-              <v-col v-for="s in yearlyStats" :key="s.year" sm="4" md="2">
-                <div class="text-body-small text-grey">{{ s.year }}</div>
-                <div class="text-title-medium text-success">{{ String(s.cash_dividend).toLocaleString() }}</div>
-                <div class="text-body-small text-grey">{{ s.count }} 筆</div>
-              </v-col>
-            </v-row>
-          </v-card-text>
-        </v-card>
+
       </v-card-text>
     </v-card>
   </div>
