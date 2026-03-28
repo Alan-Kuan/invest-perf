@@ -262,7 +262,7 @@ const clearFilters = () => {
 };
 
 const handleDelete = (id: string) => {
-  if (confirm('確定要刪除這筆記錄嗎？')) {
+  if (confirm('確定要刪除這筆紀錄嗎？')) {
     deleteTransaction(id);
     loadTransactions(filters.value);
   }
@@ -283,7 +283,7 @@ onMounted(() => {
 
 <template>
   <div>
-    <h2 class="text-headline-small mb-4">交易記錄</h2>
+    <h2 class="text-headline-small mb-4">交易紀錄</h2>
 
     <v-card class="mb-4 rounded-lg" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
       <v-card-item class="text-base font-semibold pb-2">新增交易</v-card-item>
@@ -556,7 +556,7 @@ onMounted(() => {
               </td>
             </tr>
             <tr v-if="transactions.length === 0">
-              <td colspan="10" class="text-center text-grey pa-4">尚無交易記錄</td>
+              <td colspan="10" class="text-center text-grey pa-4">尚無交易紀錄</td>
             </tr>
           </tbody>
         </v-table>

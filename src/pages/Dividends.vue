@@ -197,7 +197,7 @@ const clearFilters = () => {
 };
 
 const handleDelete = (id: string) => {
-  if (confirm('確定要刪除這筆記錄嗎？')) {
+  if (confirm('確定要刪除這筆紀錄嗎？')) {
     deleteDividend(id);
     loadDividends(filters.value);
     loadYearlyStats();
@@ -241,7 +241,7 @@ onMounted(() => {
 
 <template>
   <div>
-    <h2 class="text-headline-small mb-4">股利記錄</h2>
+    <h2 class="text-headline-small mb-4">股利紀錄</h2>
 
     <v-row class="mb-4" align="stretch">
       <v-col sm="4">
@@ -458,7 +458,7 @@ onMounted(() => {
               </td>
             </tr>
             <tr v-if="dividends.length === 0">
-              <td colspan="8" class="text-center text-grey pa-4">尚無股利記錄</td>
+              <td colspan="8" class="text-center text-grey pa-4">尚無股利紀錄</td>
             </tr>
           </tbody>
         </v-table>
