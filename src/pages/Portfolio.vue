@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { Doughnut } from 'vue-chartjs';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import { useDatabase } from '../composables/useDatabase';
@@ -35,6 +35,36 @@ const summary = ref<PortfolioSummary>({
 const isLoadingPrices = ref(false);
 const lastUpdate = ref<string | null>(null);
 const tickerDistribution = ref<DistributionData[]>([]);
+let priceUpdateInterval: ReturnType<typeof setInterval> | null = null;
+
+const isMarketHours = (): boolean => {
+  const now = new Date();
+  const day = now.getDay();
+  const hours = now.getHours();
+  const minutes = now.getMinutes();
+  const timeInMinutes = hours * 60 + minutes;
+
+  if (day === 0 || day === 6) return false;
+  if (timeInMinutes < 9 * 60 || timeInMinutes > 13 * 60 + 30) return false;
+  return true;
+};
+
+const startPriceUpdateTimer = () => {
+  if (priceUpdateInterval) return;
+
+  priceUpdateInterval = setInterval(() => {
+    if (isMarketHours() && summary.value.holdings.length > 0) {
+      fetchAllPrices();
+    }
+  }, 5 * 60 * 1000);
+};
+
+const stopPriceUpdateTimer = () => {
+  if (priceUpdateInterval) {
+    clearInterval(priceUpdateInterval);
+    priceUpdateInterval = null;
+  }
+};
 
 const loadData = () => {
   const data = getPortfolioSummary();
@@ -125,7 +155,15 @@ watch(isReady, (ready) => {
 onMounted(() => {
   if (isReady.value) {
     loadData();
+    if (isMarketHours()) {
+      fetchAllPrices();
+      startPriceUpdateTimer();
+    }
   }
+});
+
+onUnmounted(() => {
+  stopPriceUpdateTimer();
 });
 </script>
 
