@@ -48,8 +48,8 @@ export function useTransactions() {
     const params: string[] = [];
 
     if (filters.ticker) {
-      sql += ' AND ticker LIKE ?';
-      params.push(`%${filters.ticker}%`);
+      sql += ' AND (ticker LIKE ? OR name LIKE ?)';
+      params.push(`%${filters.ticker}%`, `%${filters.ticker}%`);
     }
 
     if (filters.type) {

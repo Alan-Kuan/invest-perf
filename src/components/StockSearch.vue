@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, watch, onMounted, nextTick } from 'vue';
 import { useStockList } from '../composables/useStockList';
 
 interface Stock {
@@ -22,88 +22,129 @@ const emit = defineEmits<{
 const { loadStockList, addStock, searchStocks, isLoading } = useStockList();
 
 const searchQuery = ref('');
-const showDropdown = ref(false);
+const displayValue = ref('');
+const selectedName = ref('');
+const selectedTicker = ref('');
+const isMenuOpen = ref(false);
 const results = ref<Stock[]>([]);
-const dropdownRef = ref<HTMLElement | null>(null);
-const inputRef = ref<any>(null);
+const highlightedIndex = ref(-1);
+const listRef = ref<HTMLElement | null>(null);
 
 const performSearch = () => {
   const query = searchQuery.value;
-  if (!query) {
+  if (!query || query.length < 1) {
     results.value = [];
-    showDropdown.value = false;
+    highlightedIndex.value = -1;
     return;
   }
-
-  const searchResults = searchStocks(query);
-  results.value = searchResults;
-  showDropdown.value = searchResults.length > 0;
+  results.value = searchStocks(query);
+  highlightedIndex.value = results.value.length > 0 ? 0 : -1;
 };
 
 const selectStock = (stock: Stock) => {
   emit('update:ticker', stock.ticker);
   emit('update:name', stock.name);
   emit('select', stock);
-  searchQuery.value = stock.ticker;
-  showDropdown.value = false;
+  selectedName.value = stock.name;
+  selectedTicker.value = stock.ticker;
+  displayValue.value = stock.name;
+  searchQuery.value = '';
+  isMenuOpen.value = false;
   addStock(stock);
 };
 
-const handleClickOutside = (e: Event) => {
-  if (dropdownRef.value && !dropdownRef.value.contains(e.target as Node)) {
-    showDropdown.value = false;
+const handleKeydown = (e: KeyboardEvent) => {
+  if (e.key === 'Enter' && highlightedIndex.value >= 0) {
+    e.preventDefault();
+    e.stopPropagation();
+    selectStock(results.value[highlightedIndex.value]);
+    return;
+  }
+
+  if (!isMenuOpen.value) return;
+
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    if (highlightedIndex.value < results.value.length - 1) {
+      highlightedIndex.value++;
+      scrollToHighlighted();
+    }
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    if (highlightedIndex.value > 0) {
+      highlightedIndex.value--;
+      scrollToHighlighted();
+    }
+  } else if (e.key === 'Escape') {
+    isMenuOpen.value = false;
   }
 };
 
-const handleKeydown = (e: KeyboardEvent) => {
-  if (e.key === 'Escape') {
-    showDropdown.value = false;
+const scrollToHighlighted = async () => {
+  await nextTick();
+  const list = listRef.value as any;
+  if (!list?.$el) return;
+  const items = list.$el.querySelectorAll('.highlighted');
+  if (items.length > 0) {
+    items[0].scrollIntoView({ block: 'nearest' });
   }
 };
+
+watch(() => props.ticker, (newTicker) => {
+  if (newTicker !== undefined) {
+    searchQuery.value = newTicker;
+  }
+});
+
+watch(() => props.name, (newName) => {
+  if (newName) {
+    displayValue.value = newName;
+  }
+});
 
 onMounted(async () => {
   await loadStockList();
 
   if (props.ticker) {
     searchQuery.value = props.ticker;
-  } else if (props.name) {
-    searchQuery.value = props.name;
   }
-
-  document.addEventListener('click', handleClickOutside);
-  document.addEventListener('keydown', handleKeydown);
-});
-
-onUnmounted(() => {
-  document.removeEventListener('click', handleClickOutside);
-  document.removeEventListener('keydown', handleKeydown);
+  if (props.name) {
+    displayValue.value = props.name;
+  }
 });
 </script>
 
 <template>
-  <div class="stock-search" ref="dropdownRef">
-    <v-text-field
-      ref="inputRef"
-      v-model="searchQuery"
-      :placeholder="isLoading ? '載入股票清單中...' : placeholder"
-      variant="outlined"
-      density="compact"
-      hide-details
-      @input="performSearch"
-      @focus="performSearch"
-    >
-      <template v-if="ticker" #append-inner>
-        <v-chip size="small" color="primary">{{ ticker }}</v-chip>
-      </template>
-    </v-text-field>
+  <v-menu
+    v-model="isMenuOpen"
+    :close-on-content-click="false"
+    location="bottom start"
+  >
+    <template #activator="{ props: activatorProps }">
+      <v-text-field
+        :model-value="displayValue || searchQuery"
+        v-bind="activatorProps"
+        :placeholder="isLoading ? '載入股票清單中...' : placeholder"
+        variant="outlined"
+        density="compact"
+        hide-details
+        @update:model-value="(val: string) => { displayValue = ''; searchQuery = val; performSearch(); }"
+        @keydown="handleKeydown"
+      >
+        <template v-if="selectedTicker" #append-inner>
+          <v-chip size="small" color="primary">{{ selectedTicker }}</v-chip>
+        </template>
+      </v-text-field>
+    </template>
 
-    <v-card v-if="showDropdown && results.length > 0" class="dropdown">
-      <v-list density="compact">
+    <v-card v-if="results.length > 0" min-width="300" max-height="300" class="overflow-y-auto">
+      <v-list ref="listRef" density="compact">
         <v-list-item
-          v-for="stock in results"
+          v-for="(stock, index) in results"
           :key="stock.ticker"
-          :active="ticker === stock.ticker"
+          :class="{ 'bg-grey-lighten-3 highlighted': index === highlightedIndex }"
           @click="selectStock(stock)"
+          @mouseenter="highlightedIndex = index"
         >
           <v-list-item-title>
             <span class="font-weight-bold mr-2">{{ stock.ticker }}</span>
@@ -113,27 +154,10 @@ onUnmounted(() => {
       </v-list>
     </v-card>
 
-    <v-card v-if="showDropdown && results.length === 0 && searchQuery.length >= 1 && !isLoading" class="dropdown">
+    <v-card v-else-if="searchQuery && searchQuery.length >= 1 && !isLoading" min-width="300">
       <v-list-item class="text-grey">
         找不到 "{{ searchQuery }}"
       </v-list-item>
     </v-card>
-  </div>
+  </v-menu>
 </template>
-
-<style scoped>
-.stock-search {
-  position: relative;
-}
-
-.dropdown {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  z-index: 1000;
-  margin-top: 4px;
-  max-height: 300px;
-  overflow-y: auto;
-}
-</style>

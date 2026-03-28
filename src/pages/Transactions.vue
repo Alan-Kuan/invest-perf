@@ -144,6 +144,7 @@ const adjustShares = (delta: number) => {
 
 interface TransactionFilters {
   ticker: string;
+  name: string;
   type: string;
   startDate: string;
   startDatePicker: string;
@@ -153,6 +154,7 @@ interface TransactionFilters {
 
 const filters = ref<TransactionFilters>({
   ticker: '',
+  name: '',
   type: '',
   startDate: '',
   startDatePicker: '',
@@ -249,6 +251,7 @@ const applyFilters = () => {
 const clearFilters = () => {
   filters.value = {
     ticker: '',
+    name: '',
     type: '',
     startDate: '',
     startDatePicker: '',
@@ -424,13 +427,12 @@ onMounted(() => {
       <v-card-text>
         <v-row class="mb-4" align="center">
           <v-col cols="12" sm="6" md="3">
-            <v-text-field
-              v-model="filters.ticker"
-              label="商品代號"
-              variant="outlined"
-              density="compact"
-              hide-details
-              @keyup.enter="applyFilters"
+            <StockSearch
+              :ticker="filters.ticker"
+              :name="filters.name"
+              placeholder="輸入代號或名稱搜尋"
+              @update:ticker="filters.ticker = $event; applyFilters()"
+              @update:name="filters.name = $event"
             />
           </v-col>
           <v-col cols="12" sm="6" md="3">
