@@ -412,7 +412,7 @@ onMounted(() => {
             <tr class="bg-grey-lighten-4">
               <th class="text-left font-semibold text-grey-darken-1">發放日</th>
               <th class="text-left font-semibold text-grey-darken-1">商品</th>
-              <th class="text-left font-semibold text-grey-darken-1">類別</th>
+              <th class="text-center font-semibold text-grey-darken-1">類別</th>
               <th class="text-right font-semibold text-grey-darken-1">基準日持有股數</th>
               <th class="text-right font-semibold text-grey-darken-1">每股股利</th>
               <th class="text-right font-semibold text-grey-darken-1">匯費</th>
@@ -427,7 +427,7 @@ onMounted(() => {
                 <div class="font-weight-bold">{{ d.ticker }}</div>
                 <div class="text-body-small text-grey">{{ d.name }}</div>
               </td>
-              <td>
+              <td class="text-center">
                 <v-chip :color="d.category === 'cash' ? 'success' : 'orange'" size="small" class="text-xs">
                   {{ d.category === 'cash' ? '現金' : '股票' }}
                 </v-chip>

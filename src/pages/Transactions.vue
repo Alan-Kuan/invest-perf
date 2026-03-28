@@ -542,7 +542,7 @@ onMounted(() => {
             <tr class="bg-grey-lighten-4">
               <th class="text-left font-semibold text-grey-darken-1">成交日期</th>
               <th class="text-left font-semibold text-grey-darken-1">商品</th>
-              <th class="text-left font-semibold text-grey-darken-1">交易別</th>
+              <th class="text-center font-semibold text-grey-darken-1">交易別</th>
               <th class="text-right font-semibold text-grey-darken-1">股數</th>
               <th class="text-right font-semibold text-grey-darken-1">單價</th>
               <th class="text-right font-semibold text-grey-darken-1">價金</th>
@@ -559,7 +559,7 @@ onMounted(() => {
                 <div class="font-weight-bold">{{ t.ticker }}</div>
                 <div class="text-body-small text-grey">{{ t.name }}</div>
               </td>
-              <td>
+              <td class="text-center">
                 <v-chip :color="t.type === 'buy' ? 'info' : 'error'" size="small" class="text-xs">
                   {{ t.type === 'buy' ? '買進' : '賣出' }}
                 </v-chip>
