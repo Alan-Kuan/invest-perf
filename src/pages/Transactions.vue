@@ -1,11 +1,83 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue';
 import { useDatabase } from '../composables/useDatabase';
-import { useTransactions } from '../composables/useTransactions';
+import { useTransactions, type TransactionInput } from '../composables/useTransactions';
 import StockSearch from '../components/StockSearch.vue';
+import { exportToCsv, parseCsv } from '../utils/csv';
 
 const { isReady } = useDatabase();
 const { transactions, loadTransactions, addTransaction, deleteTransaction } = useTransactions();
+
+const fileInput = ref<HTMLInputElement | null>(null);
+const importLoading = ref(false);
+
+const exportCsv = () => {
+  const data = transactions.value.map(t => ({
+    日期: t.date,
+    代號: t.ticker,
+    名稱: t.name,
+    交易別: t.type === 'buy' ? '買進' : '賣出',
+    股數: t.shares,
+    單價: t.price,
+    價金: t.total,
+    手續費: t.fee,
+    交易稅: t.tax,
+    淨收付: t.net_amount
+  }));
+  const date = new Date().toISOString().split('T')[0];
+  exportToCsv(data, `transactions-${date}.csv`);
+};
+
+const triggerImport = () => {
+  fileInput.value?.click();
+};
+
+const handleFileImport = async (event: Event) => {
+  const target = event.target as HTMLInputElement;
+  const file = target.files?.[0];
+  if (!file) return;
+
+  importLoading.value = true;
+  try {
+    const text = await file.text();
+    const rows = parseCsv(text);
+
+    let imported = 0;
+    for (const row of rows) {
+      const date = row['日期'] || row['date'];
+      const ticker = row['代號'] || row['ticker'];
+      const type = row['交易別'] || row['type'];
+      const shares = parseInt(row['股數'] || row['shares']);
+      const price = parseFloat(row['單價'] || row['price']);
+      const fee = parseFloat(row['手續費'] || row['fee'] || '0');
+      const tax = parseFloat(row['交易稅'] || row['tax'] || '0');
+
+      if (date && ticker && shares && price) {
+        const input: TransactionInput = {
+          date,
+          ticker,
+          name: row['名稱'] || row['name'] || '',
+          type: type === '買進' || type === 'buy' ? 'buy' : 'sell',
+          shares,
+          price,
+          fee,
+          tax
+        };
+        addTransaction(input);
+        imported++;
+      }
+    }
+
+    alert(`匯入成功：${imported} 筆`);
+    loadTransactions(filters.value);
+  } catch (e) {
+    console.error('Import error:', e);
+    alert('匯入失敗');
+  } finally {
+    importLoading.value = false;
+    target.value = '';
+  }
+};
 
 const formatDate = (date: string) => date ? date.replace(/-/g, '/') : '';
 
@@ -426,6 +498,17 @@ onMounted(() => {
           <v-col cols="12" sm="6" md="2">
             <v-btn color="primary" @click="applyFilters" class="mr-2">篩選</v-btn>
             <v-btn variant="outlined" @click="clearFilters">清除</v-btn>
+          </v-col>
+          <v-col cols="12" sm="6" md="4" class="d-flex">
+            <v-btn color="success" variant="outlined" @click="exportCsv" class="mr-2">匯出 CSV</v-btn>
+            <v-btn color="info" variant="outlined" @click="triggerImport" :loading="importLoading">匯入 CSV</v-btn>
+            <input
+              ref="fileInput"
+              type="file"
+              accept=".csv"
+              style="display: none"
+              @change="handleFileImport"
+            />
           </v-col>
         </v-row>
 
