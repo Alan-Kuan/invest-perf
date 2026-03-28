@@ -1,8 +1,18 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
+import { Doughnut } from 'vue-chartjs';
+import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import { useDatabase } from '../composables/useDatabase';
 import { usePortfolio, type Holding } from '../composables/usePortfolio';
 import { useStockPrice } from '../composables/useStockPrice';
+
+ChartJS.register(ArcElement, Tooltip, Legend);
+
+interface DistributionData {
+  ticker: string;
+  name: string;
+  value: number;
+}
 
 const { isReady } = useDatabase();
 const { updatePrice, getPortfolioSummary } = usePortfolio();
@@ -30,9 +40,56 @@ const editingPrice = ref<string | null>(null);
 const newPrice = ref('');
 const isLoadingPrices = ref(false);
 const lastUpdate = ref<string | null>(null);
+const tickerDistribution = ref<DistributionData[]>([]);
 
 const loadData = () => {
   summary.value = getPortfolioSummary();
+  loadTickerDistribution();
+};
+
+const loadTickerDistribution = () => {
+  const holdings = summary.value.holdings.filter(h => h.shares > 0);
+
+  tickerDistribution.value = holdings.map(h => ({
+    ticker: h.ticker,
+    name: h.name,
+    value: (h.currentPrice || h.avg_cost) * h.shares
+  }));
+};
+
+const distributionChartData = computed(() => ({
+  labels: tickerDistribution.value.map(t => t.name),
+  datasets: [{
+    data: tickerDistribution.value.map(t => t.value),
+    backgroundColor: [
+      '#00d9ff',
+      '#ff6b6b',
+      '#4ecdc4',
+      '#ffe66d',
+      '#95e1d3',
+      '#f38181',
+      '#aa96da',
+      '#fcbad3'
+    ]
+  }]
+}));
+
+const distributionChartOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: {
+      position: 'right' as const
+    },
+    tooltip: {
+      callbacks: {
+        label: (ctx: any) => {
+          const item = tickerDistribution.value[ctx.dataIndex];
+          return `${item.name} (${item.ticker}): ${item.value.toLocaleString()}`;
+        }
+      }
+    }
+  }
 };
 
 const fetchAllPrices = async () => {
@@ -153,6 +210,20 @@ onMounted(() => {
         </v-card>
       </v-col>
     </v-row>
+
+    <v-card class="mb-4 rounded-lg" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
+      <v-card-item class="text-base font-semibold pb-2">資產配置</v-card-item>
+      <v-card-text>
+        <div style="height: 300px">
+          <Doughnut
+            v-if="tickerDistribution.length > 0"
+            :data="distributionChartData"
+            :options="distributionChartOptions"
+          />
+          <div v-else class="d-flex align-center justify-center h-100 text-grey">尚無資料</div>
+        </div>
+      </v-card-text>
+    </v-card>
 
     <v-card class="rounded-lg" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
       <v-card-item class="text-base font-semibold pb-2">持有部位</v-card-item>

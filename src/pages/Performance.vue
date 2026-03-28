@@ -4,7 +4,7 @@ import { useDatabase } from '../composables/useDatabase';
 import { useTransactions } from '../composables/useTransactions';
 import { useDividends, type YearlyStat } from '../composables/useDividends';
 import { usePortfolio } from '../composables/usePortfolio';
-import { Bar, Line, Doughnut } from 'vue-chartjs';
+import { Bar, Line } from 'vue-chartjs';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -12,7 +12,6 @@ import {
   BarElement,
   LineElement,
   PointElement,
-  ArcElement,
   Title,
   Tooltip,
   Legend
@@ -24,7 +23,6 @@ ChartJS.register(
   BarElement,
   LineElement,
   PointElement,
-  ArcElement,
   Title,
   Tooltip,
   Legend
@@ -60,14 +58,8 @@ interface MonthlyData {
   amount: number;
 }
 
-interface DistributionData {
-  ticker: string;
-  value: number;
-}
-
 const yearlyDividends = ref<YearlyStat[]>([]);
 const monthlyPerformance = ref<MonthlyData[]>([]);
-const tickerDistribution = ref<DistributionData[]>([]);
 
 const loadStats = () => {
   loadTransactions();
@@ -84,7 +76,6 @@ const loadStats = () => {
   yearlyDividends.value = getYearlyStats();
 
   loadMonthlyPerformance();
-  loadTickerDistribution();
 };
 
 const loadMonthlyPerformance = () => {
@@ -104,15 +95,6 @@ const loadMonthlyPerformance = () => {
     .map(([month, amount]) => ({ month, amount }))
     .sort((a, b) => a.month.localeCompare(b.month))
     .slice(-12);
-};
-
-const loadTickerDistribution = () => {
-  const holdings = getPortfolioSummary().holdings;
-
-  tickerDistribution.value = holdings.map(h => ({
-    ticker: h.ticker,
-    value: h.total_cost
-  }));
 };
 
 const performanceChartData = computed(() => ({
@@ -171,33 +153,6 @@ const cumulativeChartOptions = {
   scales: {
     y: {
       beginAtZero: true
-    }
-  }
-};
-
-const distributionChartData = computed(() => ({
-  labels: tickerDistribution.value.map(t => t.ticker),
-  datasets: [{
-    data: tickerDistribution.value.map(t => t.value),
-    backgroundColor: [
-      '#00d9ff',
-      '#ff6b6b',
-      '#4ecdc4',
-      '#ffe66d',
-      '#95e1d3',
-      '#f38181',
-      '#aa96da',
-      '#fcbad3'
-    ]
-  }]
-}));
-
-const distributionChartOptions = {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: {
-    legend: {
-      position: 'right' as const
     }
   }
 };
@@ -281,20 +236,6 @@ onMounted(() => {
         </v-card>
       </v-col>
     </v-row>
-
-    <v-card class="mb-4 rounded-lg" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
-      <v-card-item class="text-base font-semibold pb-2">資產配置</v-card-item>
-      <v-card-text>
-        <div style="height: 300px">
-          <Doughnut
-            v-if="tickerDistribution.length > 0"
-            :data="distributionChartData"
-            :options="distributionChartOptions"
-          />
-          <div v-else class="d-flex align-center justify-center h-100 text-grey">尚無資料</div>
-        </div>
-      </v-card-text>
-    </v-card>
   </div>
 </template>
 
