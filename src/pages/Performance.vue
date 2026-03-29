@@ -35,6 +35,7 @@ const { getPortfolioSummary, getRealizedGain } = usePortfolio();
 
 interface PerformanceStats {
   realizedGain: number;
+  unrealizedGain: number;
   totalDividend: number;
   totalReturn: number;
   buyCount: number;
@@ -45,6 +46,7 @@ interface PerformanceStats {
 
 const stats = ref<PerformanceStats>({
   realizedGain: 0,
+  unrealizedGain: 0,
   totalDividend: 0,
   totalReturn: 0,
   buyCount: 0,
@@ -68,6 +70,7 @@ const loadStats = () => {
   const summary = getPortfolioSummary();
 
   stats.value.realizedGain = getRealizedGain();
+  stats.value.unrealizedGain = summary.totalUnrealized;
   stats.value.totalDividend = dividends.value.reduce((sum, d) => sum + d.amount, 0);
   stats.value.totalReturn = stats.value.realizedGain + stats.value.totalDividend + summary.totalUnrealized;
   stats.value.buyCount = transactions.value.filter(t => t.type === 'buy').length;
@@ -175,7 +178,7 @@ onMounted(() => {
     <h2 class="text-headline-small mb-4">投資績效</h2>
 
     <v-row class="mb-4" align="stretch">
-      <v-col v-for="i in 4" :key="i" sm="6" md="3" class="d-flex align-stretch">
+      <v-col v-for="i in 5" :key="i" sm="6" md="4" lg="2" class="d-flex align-stretch">
         <v-card class="rounded-lg w-100" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
           <v-card-text class="h-100">
             <template v-if="i === 1">
@@ -185,16 +188,22 @@ onMounted(() => {
               </div>
             </template>
             <template v-else-if="i === 2">
+              <div class="text-body-small text-grey">未實現損益</div>
+              <div class="text-body-large font-weight-bold" :class="stats.unrealizedGain >= 0 ? 'text-success' : 'text-error'">
+                {{ stats.unrealizedGain >= 0 ? '+' : '' }}{{ stats.unrealizedGain.toLocaleString() }}
+              </div>
+            </template>
+            <template v-else-if="i === 3">
               <div class="text-body-small text-grey">股利收入</div>
               <div class="text-body-large font-weight-bold text-success">{{ stats.totalDividend.toLocaleString() }}</div>
             </template>
-            <template v-else-if="i === 3">
+            <template v-else-if="i === 4">
               <div class="text-body-small text-grey">總損益</div>
               <div class="text-body-large font-weight-bold" :class="stats.totalReturn >= 0 ? 'text-success' : 'text-error'">
                 {{ stats.totalReturn >= 0 ? '+' : '' }}{{ stats.totalReturn.toLocaleString() }}
               </div>
             </template>
-            <template v-else>
+            <template v-else-if="i === 5">
               <div class="text-body-small text-grey">交易次數</div>
               <div class="text-body-large font-weight-bold">{{ stats.buyCount + stats.sellCount }}</div>
               <div class="text-body-small text-grey">{{ stats.buyCount }} 買 / {{ stats.sellCount }} 賣</div>
