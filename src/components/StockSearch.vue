@@ -91,15 +91,16 @@ const scrollToHighlighted = async () => {
 };
 
 watch(() => props.ticker, (newTicker) => {
-  if (newTicker !== undefined) {
-    searchQuery.value = newTicker;
+  searchQuery.value = newTicker || '';
+  displayValue.value = '';
+  if (!newTicker) {
+    selectedTicker.value = '';
+    selectedName.value = '';
   }
 });
 
 watch(() => props.name, (newName) => {
-  if (newName) {
-    displayValue.value = newName;
-  }
+  displayValue.value = newName || '';
 });
 
 onMounted(async () => {
