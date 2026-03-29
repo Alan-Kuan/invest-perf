@@ -228,33 +228,6 @@ onMounted(() => {
   <div>
     <h2 class="text-headline-small mb-4">股利紀錄</h2>
 
-    <v-row class="mb-4" align="stretch">
-      <v-col sm="4">
-        <v-card class="rounded-lg h-full" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
-          <v-card-text>
-            <div class="text-body-small text-grey">實發股利總計</div>
-            <div class="text-xl font-weight-bold text-success">{{ totalDividend.toLocaleString() }}</div>
-          </v-card-text>
-        </v-card>
-      </v-col>
-      <v-col sm="4">
-        <v-card class="rounded-lg h-full" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
-          <v-card-text>
-            <div class="text-body-small text-grey">現金股利</div>
-            <div class="text-xl font-weight-bold">{{ totalCash.toLocaleString() }}</div>
-          </v-card-text>
-        </v-card>
-      </v-col>
-      <v-col sm="4">
-        <v-card class="rounded-lg h-full" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
-          <v-card-text>
-            <div class="text-body-small text-grey">股票股利</div>
-            <div class="text-xl font-weight-bold">{{ totalStock.toLocaleString() }}</div>
-          </v-card-text>
-        </v-card>
-      </v-col>
-    </v-row>
-
     <v-card class="mb-4 rounded-lg" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
       <v-card-item class="text-base font-semibold pb-2">新增股利</v-card-item>
       <v-card-text>
@@ -360,6 +333,33 @@ onMounted(() => {
     <v-card class="rounded-lg" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
       <v-card-item class="text-base font-semibold pb-2">股利歷史</v-card-item>
       <v-card-text>
+        <v-row class="mb-4" align="stretch">
+          <v-col sm="4">
+            <v-card class="rounded-lg h-full" variant="tonal">
+              <v-card-text>
+                <div class="text-body-small">實發股利總計</div>
+                <div class="text-body-large font-weight-bold text-success">{{ totalDividend.toLocaleString() }}</div>
+              </v-card-text>
+            </v-card>
+          </v-col>
+          <v-col sm="4">
+            <v-card class="rounded-lg h-full" variant="tonal">
+              <v-card-text>
+                <div class="text-body-small">現金股利</div>
+                <div class="text-body-large font-weight-bold">{{ totalCash.toLocaleString() }}</div>
+              </v-card-text>
+            </v-card>
+          </v-col>
+          <v-col sm="4">
+            <v-card class="rounded-lg h-full" variant="tonal">
+              <v-card-text>
+                <div class="text-body-small">股票股利</div>
+                <div class="text-body-large font-weight-bold">{{ totalStock.toLocaleString() }}</div>
+              </v-card-text>
+            </v-card>
+          </v-col>
+        </v-row>
+
         <v-row class="mb-4" align="center">
           <v-col sm="6" md="3">
             <StockSearch
