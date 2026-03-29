@@ -53,7 +53,7 @@ const handleFileImport = async (event: Event) => {
 
       if (payDate && ticker && shares && perShare) {
         const input: DividendInput = {
-          payDate,
+          payDate: normalizeDate(payDate),
           ticker,
           name: row['名稱'] || row['name'] || '',
           category: category === '現金股利' || category === 'cash' ? 'cash' : 'stock',
@@ -78,6 +78,16 @@ const handleFileImport = async (event: Event) => {
 };
 
 const formatDate = (date: string) => date ? date.replace(/-/g, '/') : '';
+
+const normalizeDate = (date: string): string => {
+  if (!date) return '';
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return date;
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 
 const formatDateToString = (date: Date | string): string => {
   if (!date) return '';
