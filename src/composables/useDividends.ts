@@ -18,7 +18,7 @@ export interface Dividend {
 interface DividendFilters {
   ticker?: string;
   category?: string;
-  year?: number | null;
+  year?: string | null;
   startDate?: string;
   endDate?: string;
 }
@@ -124,12 +124,19 @@ export function useDividends() {
     return query(sql) as unknown as YearlyStat[];
   };
 
+  const getAvailableYears = (): string[] => {
+    const sql = `SELECT DISTINCT strftime('%Y', pay_date) as year FROM dividends ORDER BY year DESC`;
+    const result = query(sql) as { year: string }[];
+    return result.map(r => r.year);
+  };
+
   return {
     dividends,
     loadDividends,
     addDividend,
     updateDividend,
     deleteDividend,
-    getYearlyStats
+    getYearlyStats,
+    getAvailableYears
   };
 }

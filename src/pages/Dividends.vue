@@ -6,7 +6,7 @@ import StockSearch from '../components/StockSearch.vue';
 import { exportToCsv, parseCsv } from '../utils/csv';
 
 const { isReady } = useDatabase();
-const { dividends, loadDividends, addDividend, deleteDividend } = useDividends();
+const { dividends, loadDividends, addDividend, deleteDividend, getAvailableYears } = useDividends();
 const showSnackbar = inject<(text: string, color?: string) => void>('showSnackbar');
 const showConfirm = inject<(message: string) => Promise<boolean>>('showConfirm');
 
@@ -142,7 +142,7 @@ interface DividendFilters {
   ticker: string;
   name: string;
   category: string;
-  year: number | null;
+  year: string | null;
 }
 
 const filters = ref<DividendFilters>({
@@ -221,15 +221,25 @@ const totalStock = computed(() => {
     .reduce((sum, d) => sum + d.shares * d.per_share, 0);
 });
 
+const availableYears = ref<string[]>([]);
+
+const loadAvailableYears = () => {
+  if (isReady.value) {
+    availableYears.value = getAvailableYears();
+  }
+};
+
 watch(isReady, (ready) => {
   if (ready) {
     loadDividends();
+    loadAvailableYears();
   }
 });
 
 onMounted(() => {
   if (isReady.value) {
     loadDividends();
+    loadAvailableYears();
   }
 });
 </script>
@@ -392,10 +402,10 @@ onMounted(() => {
             />
           </v-col>
           <v-col sm="6" md="2">
-            <v-text-field
+            <v-select
               v-model="filters.year"
+              :items="availableYears"
               label="年度"
-              type="number"
               variant="outlined"
               density="compact"
               hide-details
