@@ -94,9 +94,9 @@ interface DividendForm {
   ticker: string;
   name: string;
   category: 'cash' | 'stock';
-  shares: number;
-  perShare: number;
-  fee: number;
+  shares: number | null;
+  perShare: number | null;
+  fee: number | null;
 }
 
 const form = ref<DividendForm>({
@@ -105,9 +105,9 @@ const form = ref<DividendForm>({
   ticker: '',
   name: '',
   category: 'cash',
-  shares: 0,
-  perShare: 0,
-  fee: 0
+  shares: null,
+  perShare: null,
+  fee: null
 });
 
 const dateMenu = ref(false);
@@ -132,14 +132,14 @@ interface DividendFilters {
   ticker: string;
   name: string;
   category: string;
-  year: string;
+  year: number | null;
 }
 
 const filters = ref<DividendFilters>({
   ticker: '',
   name: '',
   category: '',
-  year: ''
+  year: null
 });
 
 const computedAmount = computed(() => {
@@ -171,9 +171,9 @@ const submitForm = () => {
     ticker: '',
     name: '',
     category: 'cash',
-    shares: 0,
-    perShare: 0,
-    fee: 0
+    shares: null,
+    perShare: null,
+    fee: null
   };
 
   loadDividends(filters.value);
@@ -184,7 +184,7 @@ const applyFilters = () => {
 };
 
 const clearFilters = () => {
-  filters.value = { ticker: '', name: '', category: '', year: '' };
+  filters.value = { ticker: '', name: '', category: '', year: null };
   loadDividends();
 };
 

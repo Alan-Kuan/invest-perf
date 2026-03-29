@@ -18,7 +18,7 @@ export interface Dividend {
 interface DividendFilters {
   ticker?: string;
   category?: string;
-  year?: string;
+  year?: number | null;
   startDate?: string;
   endDate?: string;
 }
