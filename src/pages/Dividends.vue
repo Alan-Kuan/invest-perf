@@ -388,6 +388,7 @@ onMounted(() => {
               variant="outlined"
               density="compact"
               hide-details
+              @update:model-value="applyFilters"
             />
           </v-col>
           <v-col sm="6" md="2">
@@ -398,10 +399,10 @@ onMounted(() => {
               variant="outlined"
               density="compact"
               hide-details
+              @update:model-value="applyFilters"
             />
           </v-col>
           <v-col sm="6" md="4">
-            <v-btn color="primary" @click="applyFilters" class="mr-2">篩選</v-btn>
             <v-btn variant="outlined" @click="clearFilters">清除</v-btn>
           </v-col>
           <v-col sm="6" md="4" class="d-flex">

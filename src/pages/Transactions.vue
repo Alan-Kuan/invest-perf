@@ -188,6 +188,7 @@ const updateStartDate = (val: Date | string) => {
 const confirmStartDate = () => {
   updateStartDate(filters.value.startDatePicker);
   startDateMenu.value = false;
+  applyFilters();
 };
 
 const updateEndDate = (val: Date | string) => {
@@ -204,6 +205,7 @@ const updateEndDate = (val: Date | string) => {
 const confirmEndDate = () => {
   updateEndDate(filters.value.endDatePicker);
   endDateMenu.value = false;
+  applyFilters();
 };
 
 const computedTotal = computed(() => {
@@ -466,6 +468,7 @@ onMounted(() => {
               variant="outlined"
               density="compact"
               hide-details
+              @update:model-value="applyFilters"
             />
           </v-col>
           <v-col cols="6" sm="3" md="2">
@@ -521,7 +524,6 @@ onMounted(() => {
             </v-menu>
           </v-col>
           <v-col cols="12" sm="6" md="2">
-            <v-btn color="primary" @click="applyFilters" class="mr-2">篩選</v-btn>
             <v-btn variant="outlined" @click="clearFilters">清除</v-btn>
           </v-col>
           <v-col cols="12" sm="6" md="4" class="d-flex">
