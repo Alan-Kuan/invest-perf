@@ -180,23 +180,23 @@ onMounted(() => {
           <v-card-text class="h-100">
             <template v-if="i === 1">
               <div class="text-body-small text-grey">已實現損益</div>
-              <div class="text-xl font-weight-bold" :class="stats.realizedGain >= 0 ? 'text-success' : 'text-error'">
+              <div class="text-body-large font-weight-bold" :class="stats.realizedGain >= 0 ? 'text-success' : 'text-error'">
                 {{ stats.realizedGain >= 0 ? '+' : '' }}{{ stats.realizedGain.toLocaleString() }}
               </div>
             </template>
             <template v-else-if="i === 2">
               <div class="text-body-small text-grey">股利收入</div>
-              <div class="text-xl font-weight-bold text-success">{{ stats.totalDividend.toLocaleString() }}</div>
+              <div class="text-body-large font-weight-bold text-success">{{ stats.totalDividend.toLocaleString() }}</div>
             </template>
             <template v-else-if="i === 3">
               <div class="text-body-small text-grey">總損益</div>
-              <div class="text-xl font-weight-bold" :class="stats.totalReturn >= 0 ? 'text-success' : 'text-error'">
+              <div class="text-body-large font-weight-bold" :class="stats.totalReturn >= 0 ? 'text-success' : 'text-error'">
                 {{ stats.totalReturn >= 0 ? '+' : '' }}{{ stats.totalReturn.toLocaleString() }}
               </div>
             </template>
             <template v-else>
               <div class="text-body-small text-grey">交易次數</div>
-              <div class="text-xl font-weight-bold">{{ stats.buyCount + stats.sellCount }}</div>
+              <div class="text-body-large font-weight-bold">{{ stats.buyCount + stats.sellCount }}</div>
               <div class="text-body-small text-grey">{{ stats.buyCount }} 買 / {{ stats.sellCount }} 賣</div>
             </template>
           </v-card-text>

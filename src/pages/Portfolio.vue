@@ -190,7 +190,7 @@ onUnmounted(() => {
         <v-card class="rounded-lg h-full" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
           <v-card-text>
             <div class="text-body-small text-grey">總成本</div>
-            <div class="text-xl font-weight-bold">{{ summary.totalCost.toLocaleString() }}</div>
+            <div class="text-body-large font-weight-bold">{{ summary.totalCost.toLocaleString() }}</div>
           </v-card-text>
         </v-card>
       </v-col>
@@ -198,7 +198,7 @@ onUnmounted(() => {
         <v-card class="rounded-lg h-full" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
           <v-card-text>
             <div class="text-body-small text-grey">總市值</div>
-            <div class="text-xl font-weight-bold">{{ summary.totalValue.toLocaleString() }}</div>
+            <div class="text-body-large font-weight-bold">{{ summary.totalValue.toLocaleString() }}</div>
           </v-card-text>
         </v-card>
       </v-col>
@@ -206,7 +206,7 @@ onUnmounted(() => {
         <v-card class="rounded-lg h-full" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
           <v-card-text>
             <div class="text-body-small text-grey">未實現損益</div>
-            <div class="text-xl font-weight-bold" :class="summary.totalUnrealized >= 0 ? 'text-success' : 'text-error'">
+            <div class="text-body-large font-weight-bold" :class="summary.totalUnrealized >= 0 ? 'text-success' : 'text-error'">
               {{ summary.totalUnrealized >= 0 ? '+' : '' }}{{ summary.totalUnrealized.toLocaleString() }}
             </div>
           </v-card-text>
