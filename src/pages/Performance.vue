@@ -5,7 +5,7 @@ import { useTransactions } from '../composables/useTransactions';
 import { useDividends, type YearlyStat } from '../composables/useDividends';
 import { usePortfolio } from '../composables/usePortfolio';
 import { useStockPrice } from '../composables/useStockPrice';
-import { Bar } from 'vue-chartjs';
+import { Chart } from 'vue-chartjs';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -63,6 +63,7 @@ interface AnnualData {
   year: number;
   realizedReturnRate: number;
   unrealizedReturnRate: number;
+  totalReturnRate: number;
 }
 
 const yearlyDividends = ref<YearlyStat[]>([]);
@@ -142,7 +143,8 @@ const handleRefresh = async () => {
       annualDataList.push({
         year,
         realizedReturnRate: 0,
-        unrealizedReturnRate: 0
+        unrealizedReturnRate: 0,
+        totalReturnRate: 0
       });
       continue;
     }
@@ -150,6 +152,7 @@ const handleRefresh = async () => {
     const yearNext = year + 1;
     let realizedReturnRate = 0;
     let unrealizedReturnRate = 0;
+    let totalReturnRate = 0;
     let realizedTotalCost = 0;
     let unrealizedTotalCost = 0;
 
@@ -160,13 +163,14 @@ const handleRefresh = async () => {
       const lastDay = year == currentYear ? today : `${year}-12-31`;
       const lastDayPrice = await fetchHistoricalPrice(ticker, lastDay) || 0;
       const remainingShares = data.boughtShares - data.soldShares;
-      const realizedCost = data.soldShares * avgPrice;
-      const unrealizedCost = remainingShares * avgPrice;
 
-      realizedReturnRate += data.totalProceeds - realizedCost;
-      unrealizedReturnRate += remainingShares * lastDayPrice - unrealizedCost;
-      realizedTotalCost += realizedCost;
-      unrealizedTotalCost += unrealizedCost;
+      const realizedGain = data.totalProceeds - data.soldShares * avgPrice;
+      const unrealizedGain = remainingShares * (lastDayPrice - avgPrice);
+
+      realizedReturnRate += realizedGain;
+      unrealizedReturnRate += unrealizedGain;
+      realizedTotalCost += data.soldShares * avgPrice;
+      unrealizedTotalCost += remainingShares * avgPrice;
 
       if (remainingShares == 0) continue;
 
@@ -191,13 +195,15 @@ const handleRefresh = async () => {
       dataNextYear.boughtShares += remainingShares;
     }
 
-    realizedReturnRate /= realizedTotalCost;
-    unrealizedReturnRate /= unrealizedTotalCost;
+    totalReturnRate = (realizedReturnRate + unrealizedReturnRate) / (realizedTotalCost + unrealizedTotalCost);
+    realizedReturnRate = realizedTotalCost > 0 ? realizedReturnRate / realizedTotalCost : 0;
+    unrealizedReturnRate = unrealizedTotalCost > 0 ? unrealizedReturnRate / unrealizedTotalCost : 0;
 
     annualDataList.push({
       year,
       realizedReturnRate,
-      unrealizedReturnRate
+      unrealizedReturnRate,
+      totalReturnRate
     });
   }
 
@@ -217,7 +223,8 @@ const loadAnnualPerformanceCache = async (): Promise<AnnualData[]> => {
   return cached.map(c => ({
     year: c.year,
     realizedReturnRate: c.realized_return_rate,
-    unrealizedReturnRate: c.unrealized_return_rate
+    unrealizedReturnRate: c.unrealized_return_rate,
+    totalReturnRate: c.realized_return_rate + c.unrealized_return_rate
   }));
 };
 
@@ -267,16 +274,25 @@ const performanceChartData = computed(() => ({
   labels: annualPerformance.value.map(a => a.year),
   datasets: [
     {
+      label: '總報酬率',
+      data: annualPerformance.value.map(a => a.totalReturnRate * 100),
+      backgroundColor: '#4caf50',
+      borderRadius: 4,
+      barPercentage: 0.6
+    },
+    {
       label: '已實現',
       data: annualPerformance.value.map(a => a.realizedReturnRate * 100),
       backgroundColor: '#2196f3',
-      borderRadius: 4
+      borderRadius: 4,
+      barPercentage: 0.6
     },
     {
       label: '未實現',
       data: annualPerformance.value.map(a => a.unrealizedReturnRate * 100),
       backgroundColor: '#ff9800',
-      borderRadius: 4
+      borderRadius: 4,
+      barPercentage: 0.6
     }
   ]
 }));
@@ -300,10 +316,11 @@ const performanceChartOptions = {
   },
   scales: {
     x: {
-      stacked: true
+      grid: {
+        display: false
+      }
     },
     y: {
-      stacked: true,
       ticks: {
         callback: (value: number | string) => Number(value).toFixed(1) + '%'
       }
@@ -396,8 +413,9 @@ onMounted(() => {
           </v-card-item>
           <v-card-text>
             <div style="height: 250px">
-              <Bar
+              <Chart
                 v-if="annualPerformance.length > 0"
+                type="bar"
                 :data="performanceChartData"
                 :options="performanceChartOptions"
               />
