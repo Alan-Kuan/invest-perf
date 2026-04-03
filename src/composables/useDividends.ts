@@ -21,6 +21,7 @@ interface DividendFilters {
   year?: string | null;
   startDate?: string;
   endDate?: string;
+  sortOrder?: 'ASC' | 'DESC';
 }
 
 export interface DividendInput {
@@ -75,7 +76,8 @@ export function useDividends() {
       params.push(filters.endDate);
     }
 
-    sql += ' ORDER BY pay_date DESC, created_at DESC';
+    const order = filters.sortOrder === 'ASC' ? 'ASC' : 'DESC';
+    sql += ` ORDER BY pay_date ${order}, created_at ${order}`;
 
     dividends.value = query(sql, params) as unknown as Dividend[];
     return dividends.value;

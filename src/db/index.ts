@@ -5,7 +5,7 @@ let db: Database | null = null;
 const DB_NAME = 'invest_perf.db';
 const STORE_NAME = 'invest_perf_data';
 const IDB_NAME = 'invest_perf';
-const IDB_VERSION = 4;
+const IDB_VERSION = 6;
 
 let idbInstance: IDBDatabase | null = null;
 
@@ -74,14 +74,26 @@ export async function initDatabase(): Promise<Database> {
     db = new SQL.Database(new Uint8Array(savedData));
   } else {
     db = new SQL.Database();
-    createTables();
   }
+
+  createTables();
 
   return db;
 }
 
 function createTables(): void {
   if (!db) return;
+
+  const tableExists = db.exec("SELECT name FROM sqlite_master WHERE type='table' AND name='annual_performance'");
+  
+  if (tableExists.length > 0) {
+    const columns = db.exec("PRAGMA table_info(annual_performance)");
+    const hasOldColumns = columns[0]?.values?.some((col: any) => col[1] === 'realized_gain');
+    
+    if (hasOldColumns) {
+      db.run('DROP TABLE annual_performance');
+    }
+  }
 
   db.run(`
     CREATE TABLE IF NOT EXISTS transactions (
@@ -130,10 +142,30 @@ function createTables(): void {
     )
   `);
 
+  db.run(`
+    CREATE TABLE IF NOT EXISTS annual_performance (
+      year INTEGER PRIMARY KEY,
+      realized_return_rate REAL NOT NULL,
+      unrealized_return_rate REAL NOT NULL,
+      calculated_at TEXT NOT NULL
+    )
+  `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS historical_prices (
+      ticker TEXT NOT NULL,
+      date TEXT NOT NULL,
+      price REAL NOT NULL,
+      updated_at TEXT DEFAULT (datetime('now')),
+      PRIMARY KEY (ticker, date)
+    )
+  `);
+
   db.run(`CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions(date)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_transactions_ticker ON transactions(ticker)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_dividends_date ON dividends(pay_date)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_dividends_ticker ON dividends(ticker)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_historical_prices_ticker ON historical_prices(ticker)`);
 }
 
 export async function saveDatabase(): Promise<void> {

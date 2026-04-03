@@ -17,15 +17,6 @@ export interface Transaction {
   created_at?: string;
 }
 
-interface TransactionFilters {
-  ticker?: string;
-  type?: string;
-  startDate?: string;
-  endDate?: string;
-  startDatePicker?: string;
-  endDatePicker?: string;
-}
-
 export interface TransactionInput {
   date: string;
   ticker: string;
@@ -35,6 +26,14 @@ export interface TransactionInput {
   price: number;
   fee?: number;
   tax?: number;
+}
+
+export interface TransactionFilters {
+  ticker?: string;
+  type?: string;
+  startDate?: string;
+  endDate?: string;
+  sortOrder?: 'ASC' | 'DESC';
 }
 
 export function useTransactions() {
@@ -67,7 +66,8 @@ export function useTransactions() {
       params.push(filters.endDate);
     }
 
-    sql += ' ORDER BY date DESC, created_at DESC';
+    const order = filters.sortOrder === 'ASC' ? 'ASC' : 'DESC';
+    sql += ` ORDER BY date ${order}, created_at ${order}`;
 
     transactions.value = query(sql, params) as unknown as Transaction[];
     return transactions.value;
