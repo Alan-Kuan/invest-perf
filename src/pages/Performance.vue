@@ -212,10 +212,11 @@ const handleRefresh = async () => {
 };
 
 const loadAnnualPerformanceCache = async (): Promise<AnnualData[]> => {
-  const cached = query('SELECT * FROM annual_performance ORDER BY year ASC LIMIT 5') as {
+  const cached = query('SELECT * FROM annual_performance ORDER BY year ASC') as {
     year: number;
     realized_return_rate: number;
     unrealized_return_rate: number;
+    total_return_rate: number;
   }[];
 
   if (cached.length === 0) return [];
@@ -224,7 +225,7 @@ const loadAnnualPerformanceCache = async (): Promise<AnnualData[]> => {
     year: c.year,
     realizedReturnRate: c.realized_return_rate,
     unrealizedReturnRate: c.unrealized_return_rate,
-    totalReturnRate: c.realized_return_rate + c.unrealized_return_rate
+    totalReturnRate: c.total_return_rate
   }));
 };
 
@@ -232,9 +233,9 @@ const saveAnnualPerformanceCache = async (data: AnnualData[]): Promise<void> => 
   for (const d of data) {
     execute(
       `INSERT OR REPLACE INTO annual_performance
-       (year, realized_return_rate, unrealized_return_rate, calculated_at)
-       VALUES (?, ?, ?, datetime('now'))`,
-      [d.year, d.realizedReturnRate || 0, d.unrealizedReturnRate || 0]
+       (year, realized_return_rate, unrealized_return_rate, total_return_rate, calculated_at)
+       VALUES (?, ?, ?, ?, datetime('now'))`,
+      [d.year, d.realizedReturnRate || 0, d.unrealizedReturnRate || 0, d.totalReturnRate || 0]
     );
   }
 };
@@ -254,7 +255,7 @@ const checkAndRecalculate = async (): Promise<void> => {
   if (cached.length === 0) {
     needRecalculate = true;
   } else {
-    const cachedDate = cached[0].calculated_at;
+    const cachedDate = cached[0].calculated_at.substring(0, 10);
     if (latestDataDate > cachedDate || latestDividendDate > cachedDate) {
       needRecalculate = true;
     }

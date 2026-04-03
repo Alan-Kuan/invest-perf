@@ -5,7 +5,7 @@ let db: Database | null = null;
 const DB_NAME = 'invest_perf.db';
 const STORE_NAME = 'invest_perf_data';
 const IDB_NAME = 'invest_perf';
-const IDB_VERSION = 6;
+const IDB_VERSION = 7;
 
 let idbInstance: IDBDatabase | null = null;
 
@@ -147,6 +147,7 @@ function createTables(): void {
       year INTEGER PRIMARY KEY,
       realized_return_rate REAL NOT NULL,
       unrealized_return_rate REAL NOT NULL,
+      total_return_rate REAL NOT NULL,
       calculated_at TEXT NOT NULL
     )
   `);
