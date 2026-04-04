@@ -1,4 +1,4 @@
-import '../styles/layer.css'
+import '../styles/layer.css'; // this file should be imported before vuetify/styles
 import 'vuetify/styles';
 import { createVuetify } from 'vuetify';
 import * as components from 'vuetify/components';
@@ -18,25 +18,25 @@ export const vuetify = createVuetify({
           error: '#f44336',
           warning: '#ff9800',
           info: '#2196f3',
-          success: '#4caf50'
-        }
-      }
-    }
+          success: '#4caf50',
+        },
+      },
+    },
   },
   defaults: {
     VCard: {
-      variant: 'flat'
+      variant: 'flat',
     },
     VBtn: {
-      variant: 'flat'
+      variant: 'flat',
     },
     VTextField: {
       variant: 'outlined',
-      density: 'comfortable'
+      density: 'comfortable',
     },
     VSelect: {
       variant: 'outlined',
-      density: 'comfortable'
-    }
-  }
+      density: 'comfortable',
+    },
+  },
 });

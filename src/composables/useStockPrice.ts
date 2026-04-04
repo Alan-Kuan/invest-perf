@@ -5,30 +5,32 @@ const historicalPriceCache = new Map<string, Map<string, number | string>>();
 let lastRequestTime = 0;
 const MIN_REQUEST_INTERVAL = 1700;
 
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+function delay(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 export function useStockPrice() {
   const { query, execute } = useDatabase();
 
-  const loadFromDb = (ticker: string, date: string): number | null => {
-    const results = query(
-      'SELECT price FROM historical_prices WHERE ticker = ? AND date = ?',
-      [ticker, date]
-    );
+  function loadFromDb(ticker: string, date: string): number | null {
+    const results = query('SELECT price FROM historical_prices WHERE ticker = ? AND date = ?', [
+      ticker,
+      date,
+    ]);
     if (results.length > 0 && results[0].price !== null) {
       return results[0].price as number;
     }
     return null;
-  };
+  }
 
-  const saveToDb = async (ticker: string, date: string, price: number): Promise<void> => {
+  async function saveToDb(ticker: string, date: string, price: number): Promise<void> {
     await execute(
       `INSERT OR REPLACE INTO historical_prices (ticker, date, price, updated_at) VALUES (?, ?, ?, datetime('now'))`,
-      [ticker, date, price]
+      [ticker, date, price],
     );
-  };
+  }
 
-  const fetchPricesBatch = async (tickers: string[]): Promise<Record<string, number>> => {
+  async function fetchPricesBatch(tickers: string[]): Promise<Record<string, number>> {
     if (tickers.length === 0) return {};
 
     try {
@@ -67,9 +69,9 @@ export function useStockPrice() {
       console.error('Batch fetch failed:', e);
       return {};
     }
-  };
+  }
 
-  const fetchHistoricalPrice = async (ticker: string, date: string): Promise<number | null> => {
+  async function fetchHistoricalPrice(ticker: string, date: string): Promise<number | null> {
     const cached = historicalPriceCache.get(ticker)?.get(date);
 
     if (cached !== undefined && typeof cached === 'number') {
@@ -94,7 +96,7 @@ export function useStockPrice() {
     try {
       const dateStr = date.replace(/-/g, '');
       const response = await fetch(
-        `https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=${dateStr}&stockNo=${ticker}`
+        `https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=${dateStr}&stockNo=${ticker}`,
       );
 
       if (!response.ok || response.status !== 200) {
@@ -133,7 +135,7 @@ export function useStockPrice() {
     }
 
     return null;
-  };
+  }
 
   return {
     fetchPricesBatch,

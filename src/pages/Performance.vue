@@ -1,11 +1,4 @@
 <script setup lang="ts">
-import { ref, onMounted, watch, computed } from 'vue';
-import { useDatabase } from '../composables/useDatabase';
-import { useTransactions } from '../composables/useTransactions';
-import { useDividends, type YearlyStat } from '../composables/useDividends';
-import { usePortfolio } from '../composables/usePortfolio';
-import { useStockPrice } from '../composables/useStockPrice';
-import { Chart } from 'vue-chartjs';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -15,8 +8,16 @@ import {
   PointElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
 } from 'chart.js';
+import { ref, onMounted, watch, computed } from 'vue';
+import { Chart } from 'vue-chartjs';
+
+import { useDatabase } from '../composables/useDatabase';
+import { useDividends, type YearlyStat } from '../composables/useDividends';
+import { usePortfolio } from '../composables/usePortfolio';
+import { useStockPrice } from '../composables/useStockPrice';
+import { useTransactions } from '../composables/useTransactions';
 
 ChartJS.register(
   CategoryScale,
@@ -26,7 +27,7 @@ ChartJS.register(
   PointElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
 );
 
 const { isReady, query, execute } = useDatabase();
@@ -56,7 +57,7 @@ const stats = ref<PerformanceStats>({
   buyCount: 0,
   sellCount: 0,
   winCount: 0,
-  loseCount: 0
+  loseCount: 0,
 });
 
 interface AnnualData {
@@ -69,7 +70,7 @@ interface AnnualData {
 const yearlyDividends = ref<YearlyStat[]>([]);
 const annualPerformance = ref<AnnualData[]>([]);
 
-const loadStats = async () => {
+async function loadStats() {
   loadTransactions({ sortOrder: 'ASC' });
   loadDividends({ sortOrder: 'ASC' });
 
@@ -78,33 +79,40 @@ const loadStats = async () => {
   stats.value.realizedGain = getRealizedGain();
   stats.value.unrealizedGain = summary.totalUnrealized;
   stats.value.totalDividend = dividends.value.reduce((sum, d) => sum + d.amount, 0);
-  stats.value.totalReturn = stats.value.realizedGain + stats.value.totalDividend + summary.totalUnrealized;
+  stats.value.totalReturn =
+    stats.value.realizedGain + stats.value.totalDividend + summary.totalUnrealized;
   stats.value.buyCount = transactions.value.filter(t => t.type === 'buy').length;
   stats.value.sellCount = transactions.value.filter(t => t.type === 'sell').length;
 
   yearlyDividends.value = getYearlyStats();
 
   await checkAndRecalculate();
-};
+}
 
-const handleRefresh = async () => {
+async function handleRefresh() {
   isLoading.value = true;
   await loadAnnualPerformance();
   isLoading.value = false;
-};
+}
 
-  const loadAnnualPerformance = async () => {
+async function loadAnnualPerformance() {
   if (transactions.value.length === 0) return;
 
   const firstYear = parseInt(transactions.value[0].date.substring(0, 4));
   const currentYear = parseInt(new Date().getFullYear().toString());
 
-  const stockYearlyData = new Map<number, Map<string, {
-    totalCost: number;
-    boughtShares: number;
-    totalProceeds: number;
-    soldShares: number;
-  }>>();
+  const stockYearlyData = new Map<
+    number,
+    Map<
+      string,
+      {
+        totalCost: number;
+        boughtShares: number;
+        totalProceeds: number;
+        soldShares: number;
+      }
+    >
+  >();
 
   for (const t of transactions.value) {
     const year = parseInt(t.date.substring(0, 4));
@@ -120,7 +128,7 @@ const handleRefresh = async () => {
         totalCost: 0,
         boughtShares: 0,
         totalProceeds: 0,
-        soldShares: 0
+        soldShares: 0,
       });
     }
 
@@ -144,7 +152,7 @@ const handleRefresh = async () => {
         year,
         realizedReturnRate: 0,
         unrealizedReturnRate: 0,
-        totalReturnRate: 0
+        totalReturnRate: 0,
       });
       continue;
     }
@@ -161,7 +169,7 @@ const handleRefresh = async () => {
     for (const [ticker, data] of yearData) {
       const avgPrice = data.totalCost / data.boughtShares;
       const lastDay = year == currentYear ? today : `${year}-12-31`;
-      const lastDayPrice = await fetchHistoricalPrice(ticker, lastDay) || 0;
+      const lastDayPrice = (await fetchHistoricalPrice(ticker, lastDay)) || 0;
       const remainingShares = data.boughtShares - data.soldShares;
 
       const realizedGain = data.totalProceeds - data.soldShares * avgPrice;
@@ -185,7 +193,7 @@ const handleRefresh = async () => {
           totalCost: 0,
           boughtShares: 0,
           totalProceeds: 0,
-          soldShares: 0
+          soldShares: 0,
         });
       }
 
@@ -195,7 +203,8 @@ const handleRefresh = async () => {
       dataNextYear.boughtShares += remainingShares;
     }
 
-    totalReturnRate = (realizedReturnRate + unrealizedReturnRate) / (realizedTotalCost + unrealizedTotalCost);
+    totalReturnRate =
+      (realizedReturnRate + unrealizedReturnRate) / (realizedTotalCost + unrealizedTotalCost);
     realizedReturnRate = realizedTotalCost > 0 ? realizedReturnRate / realizedTotalCost : 0;
     unrealizedReturnRate = unrealizedTotalCost > 0 ? unrealizedReturnRate / unrealizedTotalCost : 0;
 
@@ -203,15 +212,15 @@ const handleRefresh = async () => {
       year,
       realizedReturnRate,
       unrealizedReturnRate,
-      totalReturnRate
+      totalReturnRate,
     });
   }
 
   annualPerformance.value = annualDataList;
   await saveAnnualPerformanceCache(annualPerformance.value);
-};
+}
 
-const loadAnnualPerformanceCache = async (): Promise<AnnualData[]> => {
+async function loadAnnualPerformanceCache(): Promise<AnnualData[]> {
   const cached = query('SELECT * FROM annual_performance ORDER BY year ASC') as {
     year: number;
     realized_return_rate: number;
@@ -225,27 +234,34 @@ const loadAnnualPerformanceCache = async (): Promise<AnnualData[]> => {
     year: c.year,
     realizedReturnRate: c.realized_return_rate,
     unrealizedReturnRate: c.unrealized_return_rate,
-    totalReturnRate: c.total_return_rate
+    totalReturnRate: c.total_return_rate,
   }));
-};
+}
 
-const saveAnnualPerformanceCache = async (data: AnnualData[]): Promise<void> => {
+async function saveAnnualPerformanceCache(data: AnnualData[]): Promise<void> {
   for (const d of data) {
     execute(
       `INSERT OR REPLACE INTO annual_performance
        (year, realized_return_rate, unrealized_return_rate, total_return_rate, calculated_at)
        VALUES (?, ?, ?, ?, datetime('now'))`,
-      [d.year, d.realizedReturnRate || 0, d.unrealizedReturnRate || 0, d.totalReturnRate || 0]
+      [d.year, d.realizedReturnRate || 0, d.unrealizedReturnRate || 0, d.totalReturnRate || 0],
     );
   }
-};
+}
 
-const checkAndRecalculate = async (): Promise<void> => {
+async function checkAndRecalculate(): Promise<void> {
   const currentYear = new Date().getFullYear();
-  const cached = query('SELECT * FROM annual_performance WHERE year = ?', [currentYear]) as { year: number; calculated_at: string }[];
+  const cached = query('SELECT * FROM annual_performance WHERE year = ?', [currentYear]) as {
+    year: number;
+    calculated_at: string;
+  }[];
 
-  const latestTransaction = query('SELECT MAX(date) as max_date FROM transactions') as { max_date: string }[];
-  const latestDividend = query('SELECT MAX(pay_date) as max_date FROM dividends') as { max_date: string }[];
+  const latestTransaction = query('SELECT MAX(date) as max_date FROM transactions') as {
+    max_date: string;
+  }[];
+  const latestDividend = query('SELECT MAX(pay_date) as max_date FROM dividends') as {
+    max_date: string;
+  }[];
 
   const latestDataDate = latestTransaction[0]?.max_date || '';
   const latestDividendDate = latestDividend[0]?.max_date || '';
@@ -269,7 +285,7 @@ const checkAndRecalculate = async (): Promise<void> => {
       annualPerformance.value = cachedData;
     }
   }
-};
+}
 
 const performanceChartData = computed(() => ({
   labels: annualPerformance.value.map(a => a.year),
@@ -279,23 +295,23 @@ const performanceChartData = computed(() => ({
       data: annualPerformance.value.map(a => a.totalReturnRate * 100),
       backgroundColor: '#4caf50',
       borderRadius: 4,
-      barPercentage: 0.6
+      barPercentage: 0.6,
     },
     {
       label: '已實現',
       data: annualPerformance.value.map(a => a.realizedReturnRate * 100),
       backgroundColor: '#2196f3',
       borderRadius: 4,
-      barPercentage: 0.6
+      barPercentage: 0.6,
     },
     {
       label: '未實現',
       data: annualPerformance.value.map(a => a.unrealizedReturnRate * 100),
       backgroundColor: '#ff9800',
       borderRadius: 4,
-      barPercentage: 0.6
-    }
-  ]
+      barPercentage: 0.6,
+    },
+  ],
 }));
 
 const performanceChartOptions = {
@@ -303,33 +319,31 @@ const performanceChartOptions = {
   maintainAspectRatio: false,
   plugins: {
     legend: {
-      position: 'bottom' as const
+      position: 'bottom' as const,
     },
     tooltip: {
       callbacks: {
         label: (context: any) => {
-          return [
-            `${context.dataset.label}: ${context.raw?.toFixed(2)}%`
-          ];
-        }
-      }
-    }
+          return [`${context.dataset.label}: ${context.raw?.toFixed(2)}%`];
+        },
+      },
+    },
   },
   scales: {
     x: {
       grid: {
-        display: false
-      }
+        display: false,
+      },
     },
     y: {
       ticks: {
-        callback: (value: number | string) => Number(value).toFixed(1) + '%'
-      }
-    }
-  }
+        callback: (value: number | string) => Number(value).toFixed(1) + '%',
+      },
+    },
+  },
 };
 
-watch(isReady, (ready) => {
+watch(isReady, ready => {
   if (ready) {
     loadStats();
   }
@@ -352,30 +366,46 @@ onMounted(() => {
           <v-card-text class="h-100">
             <template v-if="i === 1">
               <div class="text-body-small text-grey">已實現損益</div>
-              <div class="text-body-large font-weight-bold" :class="stats.realizedGain >= 0 ? 'text-success' : 'text-error'">
+              <div
+                class="text-body-large font-weight-bold"
+                :class="stats.realizedGain >= 0 ? 'text-success' : 'text-error'"
+              >
                 {{ stats.realizedGain >= 0 ? '+' : '' }}{{ stats.realizedGain.toLocaleString() }}
               </div>
             </template>
             <template v-else-if="i === 2">
               <div class="text-body-small text-grey">未實現損益</div>
-              <div class="text-body-large font-weight-bold" :class="stats.unrealizedGain >= 0 ? 'text-success' : 'text-error'">
-                {{ stats.unrealizedGain >= 0 ? '+' : '' }}{{ stats.unrealizedGain.toLocaleString() }}
+              <div
+                class="text-body-large font-weight-bold"
+                :class="stats.unrealizedGain >= 0 ? 'text-success' : 'text-error'"
+              >
+                {{ stats.unrealizedGain >= 0 ? '+' : ''
+                }}{{ stats.unrealizedGain.toLocaleString() }}
               </div>
             </template>
             <template v-else-if="i === 3">
               <div class="text-body-small text-grey">股利收入</div>
-              <div class="text-body-large font-weight-bold text-success">{{ stats.totalDividend.toLocaleString() }}</div>
+              <div class="text-body-large font-weight-bold text-success">
+                {{ stats.totalDividend.toLocaleString() }}
+              </div>
             </template>
             <template v-else-if="i === 4">
               <div class="text-body-small text-grey">總損益</div>
-              <div class="text-body-large font-weight-bold" :class="stats.totalReturn >= 0 ? 'text-success' : 'text-error'">
+              <div
+                class="text-body-large font-weight-bold"
+                :class="stats.totalReturn >= 0 ? 'text-success' : 'text-error'"
+              >
                 {{ stats.totalReturn >= 0 ? '+' : '' }}{{ stats.totalReturn.toLocaleString() }}
               </div>
             </template>
             <template v-else-if="i === 5">
               <div class="text-body-small text-grey">交易次數</div>
-              <div class="text-body-large font-weight-bold">{{ stats.buyCount + stats.sellCount }}</div>
-              <div class="text-body-small text-grey">{{ stats.buyCount }} 買 / {{ stats.sellCount }} 賣</div>
+              <div class="text-body-large font-weight-bold">
+                {{ stats.buyCount + stats.sellCount }}
+              </div>
+              <div class="text-body-small text-grey">
+                {{ stats.buyCount }} 買 / {{ stats.sellCount }} 賣
+              </div>
             </template>
           </v-card-text>
         </v-card>
@@ -390,24 +420,26 @@ onMounted(() => {
               <span class="text-base font-semibold">年度報酬率</span>
               <v-tooltip origin="start center" transition="scale-transition">
                 <template v-slot:activator="{ props }">
-                  <v-icon v-bind="props" size="small" class="ml-1" color="grey">mdi-help-circle-outline</v-icon>
+                  <v-icon v-bind="props" size="small" class="ml-1" color="grey"
+                    >mdi-help-circle-outline</v-icon
+                  >
                 </template>
                 <ul class="ma-0 pa-2">
-                  <li>已實現報酬率 = Σ(((股票賣出價 - 股票買入均價) × 賣出股數)) / Σ(股票買入均價 × 賣出股數) × 100%</li>
-                  <li>未實現報酬率 = Σ(((年末剩餘股票收盤價 - 股票買入均價) × 剩餘股數)) / Σ(股票買入均價 × 剩餘股數) × 100%</li>
+                  <li>
+                    已實現報酬率 = Σ(((股票賣出價 - 股票買入均價) × 賣出股數)) / Σ(股票買入均價 ×
+                    賣出股數) × 100%
+                  </li>
+                  <li>
+                    未實現報酬率 = Σ(((年末剩餘股票收盤價 - 股票買入均價) × 剩餘股數)) /
+                    Σ(股票買入均價 × 剩餘股數) × 100%
+                  </li>
                   <li>剩餘股票以當年年末收盤價作為成本價留到隔年繼續計算</li>
                   <li>已考量手續費和交易稅</li>
                 </ul>
               </v-tooltip>
             </div>
             <template v-slot:append>
-              <v-btn
-                icon
-                size="small"
-                variant="text"
-                :loading="isLoading"
-                @click="handleRefresh"
-              >
+              <v-btn icon size="small" variant="text" :loading="isLoading" @click="handleRefresh">
                 <v-icon size="small">mdi-refresh</v-icon>
               </v-btn>
             </template>

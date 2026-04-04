@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch, inject } from 'vue';
+
+import StockSearch from '../components/StockSearch.vue';
 import { useDatabase } from '../composables/useDatabase';
 import { useDividends, type DividendInput } from '../composables/useDividends';
-import StockSearch from '../components/StockSearch.vue';
 import { exportToCsv, parseCsv } from '../utils/csv';
 
 const { isReady } = useDatabase();
@@ -22,7 +23,7 @@ const exportCsv = () => {
     基準日持有股數: d.shares,
     每股股利: d.per_share,
     匯費: d.fee,
-    實發股利: d.amount
+    實發股利: d.amount,
   }));
   const date = new Date().toISOString().split('T')[0];
   exportToCsv(data, `dividends-${date}.csv`);
@@ -59,7 +60,7 @@ const handleFileImport = async (event: Event) => {
           category: category === '現金股利' || category === 'cash' ? 'cash' : 'stock',
           shares,
           perShare,
-          fee
+          fee,
         };
         addDividend(input);
         imported++;
@@ -77,7 +78,7 @@ const handleFileImport = async (event: Event) => {
   }
 };
 
-const formatDate = (date: string) => date ? date.replace(/-/g, '/') : '';
+const formatDate = (date: string) => (date ? date.replace(/-/g, '/') : '');
 
 const normalizeDate = (date: string): string => {
   if (!date) return '';
@@ -117,7 +118,7 @@ const form = ref<DividendForm>({
   category: 'cash',
   shares: null,
   perShare: null,
-  fee: null
+  fee: null,
 });
 
 const dateMenu = ref(false);
@@ -149,7 +150,7 @@ const filters = ref<DividendFilters>({
   ticker: '',
   name: '',
   category: '',
-  year: null
+  year: null,
 });
 
 const computedAmount = computed(() => {
@@ -172,7 +173,7 @@ const submitForm = () => {
     category: form.value.category,
     shares: form.value.shares,
     perShare: form.value.perShare,
-    fee: form.value.fee || 0
+    fee: form.value.fee || 0,
   });
 
   form.value = {
@@ -183,7 +184,7 @@ const submitForm = () => {
     category: 'cash',
     shares: null,
     perShare: null,
-    fee: null
+    fee: null,
   };
 
   loadDividends(filters.value);
@@ -210,9 +211,7 @@ const totalDividend = computed(() => {
 });
 
 const totalCash = computed(() => {
-  return dividends.value
-    .filter(d => d.category === 'cash')
-    .reduce((sum, d) => sum + d.amount, 0);
+  return dividends.value.filter(d => d.category === 'cash').reduce((sum, d) => sum + d.amount, 0);
 });
 
 const totalStock = computed(() => {
@@ -229,7 +228,7 @@ const loadAvailableYears = () => {
   }
 };
 
-watch(isReady, (ready) => {
+watch(isReady, ready => {
   if (ready) {
     loadDividends();
     loadAvailableYears();
@@ -256,24 +255,18 @@ onMounted(() => {
             <v-col cols="12" sm="6" md="3">
               <v-menu v-model="dateMenu" :close-on-content-click="false" :close-on-esc="false">
                 <template #activator="{ props }">
-                   <v-text-field
-                     v-model="form.payDate"
-                     label="發放日期"
-                     variant="outlined"
-                     density="compact"
-                     readonly
-                     v-bind="props"
-                   />
+                  <v-text-field
+                    v-model="form.payDate"
+                    label="發放日期"
+                    variant="outlined"
+                    density="compact"
+                    readonly
+                    v-bind="props"
+                  />
                 </template>
                 <v-date-picker v-model="form.payDatePicker" hide-title color="primary">
                   <template #actions>
-                    <v-btn
-                      text
-                      color="primary"
-                      @click="confirmDate"
-                    >
-                      確認
-                    </v-btn>
+                    <v-btn text color="primary" @click="confirmDate"> 確認 </v-btn>
                   </template>
                 </v-date-picker>
               </v-menu>
@@ -291,33 +284,36 @@ onMounted(() => {
 
             <v-col cols="12" sm="6" md="3">
               <v-select
-                 v-model="form.category"
-                 :items="[{ title: '現金股利', value: 'cash' }, { title: '股票股利', value: 'stock' }]"
-                 label="類別"
-                 variant="outlined"
-                 density="compact"
-               />
-            </v-col>
-
-            <v-col cols="12" sm="6" md="3">
-               <v-text-field
-                 v-model="form.shares"
-                 label="基準日持有股數"
-                 type="number"
-                 variant="outlined"
-                 density="compact"
-               />
+                v-model="form.category"
+                :items="[
+                  { title: '現金股利', value: 'cash' },
+                  { title: '股票股利', value: 'stock' },
+                ]"
+                label="類別"
+                variant="outlined"
+                density="compact"
+              />
             </v-col>
 
             <v-col cols="12" sm="6" md="3">
               <v-text-field
-                 v-model="form.perShare"
-                 label="每股股利"
-                 type="number"
-                 step="0.01"
-                 variant="outlined"
-                 density="compact"
-               />
+                v-model="form.shares"
+                label="基準日持有股數"
+                type="number"
+                variant="outlined"
+                density="compact"
+              />
+            </v-col>
+
+            <v-col cols="12" sm="6" md="3">
+              <v-text-field
+                v-model="form.perShare"
+                label="每股股利"
+                type="number"
+                step="0.01"
+                variant="outlined"
+                density="compact"
+              />
             </v-col>
 
             <v-col sm="6" md="3">
@@ -341,9 +337,7 @@ onMounted(() => {
                 </div>
               </div>
 
-              <v-btn type="submit" color="primary">
-                新增
-              </v-btn>
+              <v-btn type="submit" color="primary"> 新增 </v-btn>
             </v-col>
           </v-row>
         </v-form>
@@ -358,7 +352,9 @@ onMounted(() => {
             <v-card class="rounded-lg h-full" variant="tonal">
               <v-card-text>
                 <div class="text-body-small">實發股利總計</div>
-                <div class="text-body-large font-weight-bold text-success">{{ totalDividend.toLocaleString() }}</div>
+                <div class="text-body-large font-weight-bold text-success">
+                  {{ totalDividend.toLocaleString() }}
+                </div>
               </v-card-text>
             </v-card>
           </v-col>
@@ -374,7 +370,9 @@ onMounted(() => {
             <v-card class="rounded-lg h-full" variant="tonal">
               <v-card-text>
                 <div class="text-body-small">股票股利</div>
-                <div class="text-body-large font-weight-bold">{{ totalStock.toLocaleString() }}</div>
+                <div class="text-body-large font-weight-bold">
+                  {{ totalStock.toLocaleString() }}
+                </div>
               </v-card-text>
             </v-card>
           </v-col>
@@ -386,14 +384,21 @@ onMounted(() => {
               :ticker="filters.ticker"
               :name="filters.name"
               placeholder="輸入代號或名稱搜尋"
-              @update:ticker="filters.ticker = $event; applyFilters()"
+              @update:ticker="
+                filters.ticker = $event;
+                applyFilters();
+              "
               @update:name="filters.name = $event"
             />
           </v-col>
           <v-col sm="6" md="3">
             <v-select
               v-model="filters.category"
-              :items="[{ title: '全部', value: '' }, { title: '現金股利', value: 'cash' }, { title: '股票股利', value: 'stock' }]"
+              :items="[
+                { title: '全部', value: '' },
+                { title: '現金股利', value: 'cash' },
+                { title: '股票股利', value: 'stock' },
+              ]"
               label="類別"
               variant="outlined"
               density="compact"
@@ -416,8 +421,12 @@ onMounted(() => {
             <v-btn variant="outlined" @click="clearFilters">清除</v-btn>
           </v-col>
           <v-col sm="6" md="4" class="d-flex">
-            <v-btn color="success" variant="outlined" @click="exportCsv" class="mr-2">匯出 CSV</v-btn>
-            <v-btn color="info" variant="outlined" @click="triggerImport" :loading="importLoading">匯入 CSV</v-btn>
+            <v-btn color="success" variant="outlined" @click="exportCsv" class="mr-2"
+              >匯出 CSV</v-btn
+            >
+            <v-btn color="info" variant="outlined" @click="triggerImport" :loading="importLoading"
+              >匯入 CSV</v-btn
+            >
             <input
               ref="fileInput"
               type="file"
@@ -449,7 +458,11 @@ onMounted(() => {
                 <div class="text-body-small text-grey">{{ d.name }}</div>
               </td>
               <td class="text-center">
-                <v-chip :color="d.category === 'cash' ? 'success' : 'orange'" size="small" class="text-xs">
+                <v-chip
+                  :color="d.category === 'cash' ? 'success' : 'orange'"
+                  size="small"
+                  class="text-xs"
+                >
                   {{ d.category === 'cash' ? '現金' : '股票' }}
                 </v-chip>
               </td>
@@ -468,8 +481,6 @@ onMounted(() => {
             </tr>
           </tbody>
         </v-table>
-
-
       </v-card-text>
     </v-card>
   </div>

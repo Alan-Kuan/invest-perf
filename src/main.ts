@@ -1,9 +1,10 @@
 import { createApp } from 'vue';
+
 import '@mdi/font/css/materialdesignicons.css';
 import 'virtual:uno.css';
 import App from './App.vue';
-import router from './router';
 import { vuetify } from './plugins/vuetify';
+import router from './router';
 
 const app = createApp(App);
 

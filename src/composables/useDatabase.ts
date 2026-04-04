@@ -1,6 +1,14 @@
-import { ref } from 'vue';
-import { initDatabase, getDatabase, saveDatabase, clearDatabase, exportDatabase, importDatabase } from '../db';
 import type { SqlValue } from 'sql.js/dist/sql-wasm.js';
+import { ref } from 'vue';
+
+import {
+  initDatabase,
+  getDatabase,
+  saveDatabase,
+  clearDatabase,
+  exportDatabase,
+  importDatabase,
+} from '../db';
 
 interface QueryResult {
   [key: string]: SqlValue;
@@ -20,7 +28,7 @@ export function useDatabase() {
     }
   };
 
-  const query = (sql: string, params: SqlValue[] = []): QueryResult[] => {
+  function query(sql: string, params: SqlValue[] = []): QueryResult[] {
     const db = getDatabase();
     if (!db) return [];
 
@@ -41,7 +49,7 @@ export function useDatabase() {
       console.error('Query error:', e);
       return [];
     }
-  };
+  }
 
   const execute = async (sql: string, params: SqlValue[] = []): Promise<void> => {
     const db = getDatabase();
@@ -75,7 +83,7 @@ export function useDatabase() {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
 
-      reader.onload = async (e) => {
+      reader.onload = async e => {
         try {
           const data = new Uint8Array(e.target?.result as ArrayBuffer);
           await importDatabase(data);
@@ -102,6 +110,6 @@ export function useDatabase() {
     execute,
     exportData,
     importData,
-    clear
+    clear,
   };
 }

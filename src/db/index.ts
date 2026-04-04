@@ -65,7 +65,7 @@ async function clearIndexedDB(): Promise<void> {
 
 export async function initDatabase(): Promise<Database> {
   const SQL: SqlJsStatic = await initSqlJs({
-    locateFile: () => '/sql-wasm.wasm'
+    locateFile: () => '/sql-wasm.wasm',
   });
 
   const savedData = await loadFromIndexedDB();
@@ -84,12 +84,14 @@ export async function initDatabase(): Promise<Database> {
 function createTables(): void {
   if (!db) return;
 
-  const tableExists = db.exec("SELECT name FROM sqlite_master WHERE type='table' AND name='annual_performance'");
-  
+  const tableExists = db.exec(
+    "SELECT name FROM sqlite_master WHERE type='table' AND name='annual_performance'",
+  );
+
   if (tableExists.length > 0) {
-    const columns = db.exec("PRAGMA table_info(annual_performance)");
+    const columns = db.exec('PRAGMA table_info(annual_performance)');
     const hasOldColumns = columns[0]?.values?.some((col: any) => col[1] === 'realized_gain');
-    
+
     if (hasOldColumns) {
       db.run('DROP TABLE annual_performance');
     }

@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch, inject } from 'vue';
-import { useDatabase } from '../composables/useDatabase';
-import { useTransactions, type TransactionInput } from '../composables/useTransactions';
-import { useStockList } from '../composables/useStockList';
+
 import StockSearch from '../components/StockSearch.vue';
+import { useDatabase } from '../composables/useDatabase';
+import { useStockList } from '../composables/useStockList';
+import { useTransactions, type TransactionInput } from '../composables/useTransactions';
 import { exportToCsv, parseCsv } from '../utils/csv';
 
 const { isReady } = useDatabase();
@@ -34,7 +35,7 @@ const exportCsv = () => {
     價金: t.total,
     手續費: t.fee,
     交易稅: t.tax,
-    淨收付: t.net_amount
+    淨收付: t.net_amount,
   }));
   const date = new Date().toISOString().split('T')[0];
   exportToCsv(data, `transactions-${date}.csv`);
@@ -73,7 +74,7 @@ const handleFileImport = async (event: Event) => {
           shares,
           price,
           fee,
-          tax
+          tax,
         };
         addTransaction(input);
         imported++;
@@ -91,7 +92,7 @@ const handleFileImport = async (event: Event) => {
   }
 };
 
-const formatDate = (date: string) => date ? date.replace(/-/g, '/') : '';
+const formatDate = (date: string) => (date ? date.replace(/-/g, '/') : '');
 
 const formatDateToString = (date: Date | string): string => {
   if (!date) return '';
@@ -123,7 +124,7 @@ const form = ref<TransactionForm>({
   shares: '',
   price: '',
   fee: '',
-  tax: ''
+  tax: '',
 });
 
 const dateMenu = ref(false);
@@ -171,7 +172,7 @@ const filters = ref<TransactionFilters>({
   startDate: '',
   startDatePicker: '',
   endDate: '',
-  endDatePicker: ''
+  endDatePicker: '',
 });
 
 const updateStartDate = (val: Date | string) => {
@@ -240,7 +241,7 @@ const submitForm = () => {
     shares: parseInt(form.value.shares),
     price: parseFloat(form.value.price),
     fee: parseFloat(form.value.fee) || 0,
-    tax: parseFloat(form.value.tax) || 0
+    tax: parseFloat(form.value.tax) || 0,
   });
 
   form.value = {
@@ -252,7 +253,7 @@ const submitForm = () => {
     shares: '',
     price: '',
     fee: '',
-    tax: ''
+    tax: '',
   };
 
   loadTransactions(filters.value);
@@ -270,7 +271,7 @@ const clearFilters = () => {
     startDate: '',
     startDatePicker: '',
     endDate: '',
-    endDatePicker: ''
+    endDatePicker: '',
   };
   loadTransactions();
 };
@@ -282,7 +283,7 @@ const handleDelete = async (id: string) => {
   }
 };
 
-watch(isReady, (ready) => {
+watch(isReady, ready => {
   if (ready) {
     loadTransactions();
   }
@@ -318,24 +319,18 @@ onMounted(() => {
             <v-col cols="12" sm="6" md="3">
               <v-menu v-model="dateMenu" :close-on-content-click="false" :close-on-esc="false">
                 <template #activator="{ props }">
-                   <v-text-field
-                     v-model="form.date"
-                     label="成交日期"
-                     variant="outlined"
-                     density="compact"
-                     readonly
-                     v-bind="props"
-                   />
+                  <v-text-field
+                    v-model="form.date"
+                    label="成交日期"
+                    variant="outlined"
+                    density="compact"
+                    readonly
+                    v-bind="props"
+                  />
                 </template>
                 <v-date-picker v-model="form.datePicker" hide-title color="primary">
                   <template #actions>
-                    <v-btn
-                      text
-                      color="primary"
-                      @click="confirmFormDate"
-                    >
-                      確認
-                    </v-btn>
+                    <v-btn text color="primary" @click="confirmFormDate"> 確認 </v-btn>
                   </template>
                 </v-date-picker>
               </v-menu>
@@ -354,11 +349,14 @@ onMounted(() => {
             <v-col cols="12" sm="6" md="3">
               <v-select
                 v-model="form.type"
-                 :items="[{ title: '買進', value: 'buy' }, { title: '賣出', value: 'sell' }]"
-                 label="交易別"
-                 variant="outlined"
-                 density="compact"
-               />
+                :items="[
+                  { title: '買進', value: 'buy' },
+                  { title: '賣出', value: 'sell' },
+                ]"
+                label="交易別"
+                variant="outlined"
+                density="compact"
+              />
             </v-col>
 
             <v-col cols="12" sm="6" md="3">
@@ -373,24 +371,32 @@ onMounted(() => {
               >
                 <template #append-inner>
                   <div class="d-flex">
-                    <v-btn size="small" color="success" variant="text" @click="adjustShares(1000)">+1K</v-btn>
-                    <v-btn size="small" color="success" variant="text" @click="adjustShares(100)">+100</v-btn>
-                    <v-btn size="small" color="error" variant="text" @click="adjustShares(-1000)">-1K</v-btn>
-                    <v-btn size="small" color="error" variant="text" @click="adjustShares(-100)">-100</v-btn>
+                    <v-btn size="small" color="success" variant="text" @click="adjustShares(1000)"
+                      >+1K</v-btn
+                    >
+                    <v-btn size="small" color="success" variant="text" @click="adjustShares(100)"
+                      >+100</v-btn
+                    >
+                    <v-btn size="small" color="error" variant="text" @click="adjustShares(-1000)"
+                      >-1K</v-btn
+                    >
+                    <v-btn size="small" color="error" variant="text" @click="adjustShares(-100)"
+                      >-100</v-btn
+                    >
                   </div>
                 </template>
               </v-text-field>
             </v-col>
 
             <v-col cols="12" sm="6" md="3">
-                 <v-text-field
-                   v-model="form.price"
-                   label="成交單價"
-                   type="number"
-                   step="0.01"
-                   variant="outlined"
-                   density="compact"
-                 />
+              <v-text-field
+                v-model="form.price"
+                label="成交單價"
+                type="number"
+                step="0.01"
+                variant="outlined"
+                density="compact"
+              />
             </v-col>
 
             <v-col cols="12" sm="6" md="3">
@@ -431,16 +437,21 @@ onMounted(() => {
               <div class="d-flex align-baseline mr-6">
                 <div class="mr-2 text-grey text-body-large">淨收付</div>
                 <div
-                  :class="computedNetAmount === 0 ? 'text-grey' : (form.type === 'buy' ? 'text-error' : 'text-success')"
+                  :class="
+                    computedNetAmount === 0
+                      ? 'text-grey'
+                      : form.type === 'buy'
+                        ? 'text-error'
+                        : 'text-success'
+                  "
                   class="text-body-extra-large font-weight-bold"
                 >
-                  {{ computedNetAmount === 0 ? '$' : (form.type === 'buy' ? '-$' : '+$') }}{{ computedNetAmount.toLocaleString() }}
+                  {{ computedNetAmount === 0 ? '$' : form.type === 'buy' ? '-$' : '+$'
+                  }}{{ computedNetAmount.toLocaleString() }}
                 </div>
               </div>
 
-              <v-btn type="submit" color="primary">
-                新增
-              </v-btn>
+              <v-btn type="submit" color="primary"> 新增 </v-btn>
             </v-col>
           </v-row>
         </v-form>
@@ -456,14 +467,21 @@ onMounted(() => {
               :ticker="filters.ticker"
               :name="filters.name"
               placeholder="輸入代號或名稱搜尋"
-              @update:ticker="filters.ticker = $event; applyFilters()"
+              @update:ticker="
+                filters.ticker = $event;
+                applyFilters();
+              "
               @update:name="filters.name = $event"
             />
           </v-col>
           <v-col cols="12" sm="6" md="3">
             <v-select
               v-model="filters.type"
-              :items="[{ title: '全部', value: '' }, { title: '買進', value: 'buy' }, { title: '賣出', value: 'sell' }]"
+              :items="[
+                { title: '全部', value: '' },
+                { title: '買進', value: 'buy' },
+                { title: '賣出', value: 'sell' },
+              ]"
               label="交易別"
               variant="outlined"
               density="compact"
@@ -486,13 +504,7 @@ onMounted(() => {
               </template>
               <v-date-picker v-model="filters.startDatePicker" hide-title color="primary">
                 <template #actions>
-                  <v-btn
-                    text
-                    color="primary"
-                    @click="confirmStartDate"
-                  >
-                    確認
-                  </v-btn>
+                  <v-btn text color="primary" @click="confirmStartDate"> 確認 </v-btn>
                 </template>
               </v-date-picker>
             </v-menu>
@@ -512,13 +524,7 @@ onMounted(() => {
               </template>
               <v-date-picker v-model="filters.endDatePicker" hide-title color="primary">
                 <template #actions>
-                  <v-btn
-                    text
-                    color="primary"
-                    @click="confirmEndDate"
-                  >
-                    確認
-                  </v-btn>
+                  <v-btn text color="primary" @click="confirmEndDate"> 確認 </v-btn>
                 </template>
               </v-date-picker>
             </v-menu>
@@ -527,8 +533,12 @@ onMounted(() => {
             <v-btn variant="outlined" @click="clearFilters">清除</v-btn>
           </v-col>
           <v-col cols="12" sm="6" md="4" class="d-flex">
-            <v-btn color="success" variant="outlined" @click="exportCsv" class="mr-2">匯出 CSV</v-btn>
-            <v-btn color="info" variant="outlined" @click="triggerImport" :loading="importLoading">匯入 CSV</v-btn>
+            <v-btn color="success" variant="outlined" @click="exportCsv" class="mr-2"
+              >匯出 CSV</v-btn
+            >
+            <v-btn color="info" variant="outlined" @click="triggerImport" :loading="importLoading"
+              >匯入 CSV</v-btn
+            >
             <input
               ref="fileInput"
               type="file"
@@ -571,8 +581,18 @@ onMounted(() => {
               <td class="text-right">{{ t.total.toLocaleString() }}</td>
               <td class="text-right">{{ t.fee.toLocaleString() }}</td>
               <td class="text-right">{{ t.tax.toLocaleString() }}</td>
-              <td class="text-right" :class="t.net_amount === 0 ? 'text-grey' : (t.type === 'buy' ? 'text-error' : 'text-success')">
-                {{ t.net_amount === 0 ? '-' : (t.type === 'buy' ? '-' : '+') }}{{ Math.abs(t.net_amount).toLocaleString() }}
+              <td
+                class="text-right"
+                :class="
+                  t.net_amount === 0
+                    ? 'text-grey'
+                    : t.type === 'buy'
+                      ? 'text-error'
+                      : 'text-success'
+                "
+              >
+                {{ t.net_amount === 0 ? '-' : t.type === 'buy' ? '-' : '+'
+                }}{{ Math.abs(t.net_amount).toLocaleString() }}
               </td>
               <td class="text-center">
                 <v-btn color="error" size="small" variant="text" @click="handleDelete(t.id)">
@@ -587,8 +607,5 @@ onMounted(() => {
         </v-table>
       </v-card-text>
     </v-card>
-
   </div>
 </template>
-
-

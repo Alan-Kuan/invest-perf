@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { onMounted, provide } from 'vue';
+
 import { useDatabase } from './composables/useDatabase';
 
 const { init, exportData, importData, clear } = useDatabase();
@@ -12,47 +13,46 @@ const snackbar = ref(false);
 const snackbarText = ref('');
 const snackbarColor = ref('success');
 
-const showSnackbar = (text: string, color: string = 'success') => {
-  snackbarText.value = text;
-  snackbarColor.value = color;
-  snackbar.value = true;
-};
-
-provide('showSnackbar', showSnackbar);
-
 const confirmDialog = ref(false);
 const confirmMessage = ref('');
 const confirmResolve = ref<((value: boolean) => void) | null>(null);
 
-const showConfirm = (message: string): Promise<boolean> => {
+function showSnackbar(text: string, color: string = 'success') {
+  snackbarText.value = text;
+  snackbarColor.value = color;
+  snackbar.value = true;
+}
+
+function showConfirm(message: string): Promise<boolean> {
   confirmMessage.value = message;
   confirmDialog.value = true;
-  return new Promise((resolve) => {
+  return new Promise(resolve => {
     confirmResolve.value = resolve;
   });
-};
+}
 
-provide('showConfirm', showConfirm);
-
-const handleConfirm = (result: boolean) => {
+function handleConfirm(result: boolean) {
   confirmDialog.value = false;
   confirmResolve.value?.(result);
   confirmResolve.value = null;
-};
+}
+
+function handleExport() {
+  exportData();
+}
+
+function handleImportClick() {
+  fileInput.value?.click();
+}
+
+provide('showSnackbar', showSnackbar);
+provide('showConfirm', showConfirm);
 
 onMounted(async () => {
   await init();
 });
 
-const handleExport = () => {
-  exportData();
-};
-
-const handleImportClick = () => {
-  fileInput.value?.click();
-};
-
-const handleFileChange = async (event: Event) => {
+async function handleFileChange(event: Event) {
   const target = event.target as HTMLInputElement;
   const file = target.files?.[0];
   if (!file) return;
@@ -71,9 +71,9 @@ const handleFileChange = async (event: Event) => {
     isImporting.value = false;
   }
   target.value = '';
-};
+}
 
-const handleClear = async () => {
+async function handleClear() {
   if (!(await showConfirm('確定要清除所有資料嗎？此操作無法復原！'))) {
     return;
   }
@@ -84,7 +84,7 @@ const handleClear = async () => {
 
   await clear();
   window.location.reload();
-};
+}
 </script>
 
 <template>
@@ -96,10 +96,34 @@ const handleClear = async () => {
         <v-divider class="mb-4" />
 
         <v-list nav>
-          <v-list-item to="/" prepend-icon="mdi-swap-horizontal" title="交易" value="transactions" class="mb-1 rounded-lg px-2" />
-          <v-list-item to="/portfolio" prepend-icon="mdi-chart-pie" title="組合" value="portfolio" class="mb-1 rounded-lg px-2" />
-          <v-list-item to="/dividends" prepend-icon="mdi-cash" title="股利" value="dividends" class="mb-1 rounded-lg px-2" />
-          <v-list-item to="/performance" prepend-icon="mdi-chart-line" title="績效" value="performance" class="mb-1 rounded-lg px-2" />
+          <v-list-item
+            to="/"
+            prepend-icon="mdi-swap-horizontal"
+            title="交易"
+            value="transactions"
+            class="mb-1 rounded-lg px-2"
+          />
+          <v-list-item
+            to="/portfolio"
+            prepend-icon="mdi-chart-pie"
+            title="組合"
+            value="portfolio"
+            class="mb-1 rounded-lg px-2"
+          />
+          <v-list-item
+            to="/dividends"
+            prepend-icon="mdi-cash"
+            title="股利"
+            value="dividends"
+            class="mb-1 rounded-lg px-2"
+          />
+          <v-list-item
+            to="/performance"
+            prepend-icon="mdi-chart-line"
+            title="績效"
+            value="performance"
+            class="mb-1 rounded-lg px-2"
+          />
         </v-list>
       </div>
 
@@ -108,13 +132,31 @@ const handleClear = async () => {
           <v-divider class="mb-4" />
           <div class="text-body-small text-grey mb-2">資料管理</div>
           <v-list nav density="compact">
-            <v-list-item @click="handleExport" prepend-icon="mdi-download" title="匯出資料庫" density="compact" class="mb-1 rounded-lg px-2" />
-            <v-list-item @click="handleImportClick" prepend-icon="mdi-upload" :disabled="isImporting" density="compact" class="mb-1 rounded-lg px-2">
+            <v-list-item
+              @click="handleExport"
+              prepend-icon="mdi-download"
+              title="匯出資料庫"
+              density="compact"
+              class="mb-1 rounded-lg px-2"
+            />
+            <v-list-item
+              @click="handleImportClick"
+              prepend-icon="mdi-upload"
+              :disabled="isImporting"
+              density="compact"
+              class="mb-1 rounded-lg px-2"
+            >
               <template #title>
                 {{ isImporting ? '匯入中...' : '匯入資料庫' }}
               </template>
             </v-list-item>
-            <v-list-item @click="handleClear" prepend-icon="mdi-delete" title="清除資料庫" class="text-error rounded-lg px-2" density="compact" />
+            <v-list-item
+              @click="handleClear"
+              prepend-icon="mdi-delete"
+              title="清除資料庫"
+              class="text-error rounded-lg px-2"
+              density="compact"
+            />
             <input
               ref="fileInput"
               type="file"

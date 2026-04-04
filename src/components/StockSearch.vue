@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, nextTick } from 'vue';
+
 import { useStockList } from '../composables/useStockList';
 
 interface Stock {
@@ -30,7 +31,7 @@ const results = ref<Stock[]>([]);
 const highlightedIndex = ref(-1);
 const listRef = ref<HTMLElement | null>(null);
 
-const performSearch = () => {
+function performSearch() {
   const query = searchQuery.value;
   if (!query || query.length < 1) {
     results.value = [];
@@ -39,9 +40,9 @@ const performSearch = () => {
   }
   results.value = searchStocks(query);
   highlightedIndex.value = results.value.length > 0 ? 0 : -1;
-};
+}
 
-const selectStock = (stock: Stock) => {
+function selectStock(stock: Stock) {
   emit('update:ticker', stock.ticker);
   emit('update:name', stock.name);
   emit('select', stock);
@@ -51,9 +52,9 @@ const selectStock = (stock: Stock) => {
   searchQuery.value = '';
   isMenuOpen.value = false;
   addStock(stock);
-};
+}
 
-const handleKeydown = (e: KeyboardEvent) => {
+function handleKeydown(e: KeyboardEvent) {
   if (e.key === 'Enter' && highlightedIndex.value >= 0) {
     e.preventDefault();
     e.stopPropagation();
@@ -78,7 +79,7 @@ const handleKeydown = (e: KeyboardEvent) => {
   } else if (e.key === 'Escape') {
     isMenuOpen.value = false;
   }
-};
+}
 
 const scrollToHighlighted = async () => {
   await nextTick();
@@ -90,18 +91,24 @@ const scrollToHighlighted = async () => {
   }
 };
 
-watch(() => props.ticker, (newTicker) => {
-  searchQuery.value = newTicker || '';
-  displayValue.value = '';
-  if (!newTicker) {
-    selectedTicker.value = '';
-    selectedName.value = '';
-  }
-});
+watch(
+  () => props.ticker,
+  newTicker => {
+    searchQuery.value = newTicker || '';
+    displayValue.value = '';
+    if (!newTicker) {
+      selectedTicker.value = '';
+      selectedName.value = '';
+    }
+  },
+);
 
-watch(() => props.name, (newName) => {
-  displayValue.value = newName || '';
-});
+watch(
+  () => props.name,
+  newName => {
+    displayValue.value = newName || '';
+  },
+);
 
 onMounted(async () => {
   await loadStockList();
@@ -116,11 +123,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <v-menu
-    v-model="isMenuOpen"
-    :close-on-content-click="false"
-    location="bottom start"
-  >
+  <v-menu v-model="isMenuOpen" :close-on-content-click="false" location="bottom start">
     <template #activator="{ props: activatorProps }">
       <v-text-field
         :model-value="displayValue || searchQuery"
@@ -129,7 +132,13 @@ onMounted(async () => {
         variant="outlined"
         density="compact"
         hide-details
-        @update:model-value="(val: string) => { displayValue = ''; searchQuery = val; performSearch(); }"
+        @update:model-value="
+          (val: string) => {
+            displayValue = '';
+            searchQuery = val;
+            performSearch();
+          }
+        "
         @keydown="handleKeydown"
       >
         <template v-if="selectedTicker" #append-inner>
@@ -156,9 +165,7 @@ onMounted(async () => {
     </v-card>
 
     <v-card v-else-if="searchQuery && searchQuery.length >= 1 && !isLoading" min-width="300">
-      <v-list-item class="text-grey">
-        找不到 "{{ searchQuery }}"
-      </v-list-item>
+      <v-list-item class="text-grey"> 找不到 "{{ searchQuery }}" </v-list-item>
     </v-card>
   </v-menu>
 </template>

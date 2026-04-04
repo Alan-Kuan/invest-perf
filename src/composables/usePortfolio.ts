@@ -1,4 +1,5 @@
 import { ref } from 'vue';
+
 import { useDatabase } from './useDatabase';
 
 export interface Holding {
@@ -21,7 +22,7 @@ export function usePortfolio() {
   const holdings = ref<Holding[]>([]);
   const prices = ref<PriceData>({});
 
-  const loadHoldings = (): Holding[] => {
+  function loadHoldings(): Holding[] {
     const sql = `
       SELECT
         ticker,
@@ -42,14 +43,14 @@ export function usePortfolio() {
       if (prices.value[h.ticker]) {
         h.currentPrice = prices.value[h.ticker];
         h.unrealizedGain = (h.currentPrice - h.avg_cost) * h.shares;
-        h.unrealizedGainPercent = ((h.currentPrice / h.avg_cost) - 1) * 100;
+        h.unrealizedGainPercent = (h.currentPrice / h.avg_cost - 1) * 100;
       }
     });
 
     return holdings.value;
-  };
+  }
 
-  const loadPrices = (): PriceData => {
+  function loadPrices(): PriceData {
     const priceData = query('SELECT * FROM prices') as { ticker: string; price: number }[];
     priceData.forEach(p => {
       prices.value[p.ticker] = p.price;
@@ -59,23 +60,23 @@ export function usePortfolio() {
       if (prices.value[h.ticker]) {
         h.currentPrice = prices.value[h.ticker];
         h.unrealizedGain = (h.currentPrice - h.avg_cost) * h.shares;
-        h.unrealizedGainPercent = ((h.currentPrice / h.avg_cost) - 1) * 100;
+        h.unrealizedGainPercent = (h.currentPrice / h.avg_cost - 1) * 100;
       }
     });
 
     return prices.value;
-  };
+  }
 
-  const updatePrice = (ticker: string, price: number): void => {
+  function updatePrice(ticker: string, price: number): void {
     execute(
       `INSERT OR REPLACE INTO prices (ticker, price, updated_at) VALUES (?, ?, datetime('now'))`,
-      [ticker, price]
+      [ticker, price],
     );
     prices.value[ticker] = price;
     loadHoldings();
-  };
+  }
 
-  const getRealizedGain = (): number => {
+  function getRealizedGain(): number {
     const sql = `
       SELECT
         ticker,
@@ -102,14 +103,17 @@ export function usePortfolio() {
 
     const result = query(sql) as { realized_gain: number }[];
     return result.reduce((sum, r) => sum + (r.realized_gain || 0), 0);
-  };
+  }
 
-  const getPortfolioSummary = () => {
+  function getPortfolioSummary() {
     loadHoldings();
     loadPrices();
 
     const totalCost = holdings.value.reduce((sum, h) => sum + h.total_cost, 0);
-    const totalValue = holdings.value.reduce((sum, h) => sum + (h.currentPrice || h.avg_cost) * h.shares, 0);
+    const totalValue = holdings.value.reduce(
+      (sum, h) => sum + (h.currentPrice || h.avg_cost) * h.shares,
+      0,
+    );
     const totalUnrealized = holdings.value.reduce((sum, h) => sum + (h.unrealizedGain || 0), 0);
     const realizedGain = getRealizedGain();
 
@@ -119,9 +123,9 @@ export function usePortfolio() {
       totalValue,
       totalUnrealized,
       totalGain: totalUnrealized + realizedGain,
-      realizedGain
+      realizedGain,
     };
-  };
+  }
 
   return {
     holdings,
@@ -130,6 +134,6 @@ export function usePortfolio() {
     loadPrices,
     updatePrice,
     getRealizedGain,
-    getPortfolioSummary
+    getPortfolioSummary,
   };
 }

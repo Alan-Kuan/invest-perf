@@ -1,6 +1,7 @@
 import { ref } from 'vue';
-import { useDatabase } from './useDatabase';
+
 import { generateId } from '../db';
+import { useDatabase } from './useDatabase';
 
 export interface Dividend {
   id: string;
@@ -46,7 +47,7 @@ export function useDividends() {
   const dividends = ref<Dividend[]>([]);
   const currentFilters = ref<DividendFilters>({});
 
-  const loadDividends = (filters: DividendFilters = {}): Dividend[] => {
+  function loadDividends(filters: DividendFilters = {}): Dividend[] {
     currentFilters.value = filters;
     let sql = 'SELECT * FROM dividends WHERE 1=1';
     const params: string[] = [];
@@ -81,39 +82,59 @@ export function useDividends() {
 
     dividends.value = query(sql, params) as unknown as Dividend[];
     return dividends.value;
-  };
+  }
 
-  const addDividend = (data: DividendInput): string => {
+  function addDividend(data: DividendInput): string {
     const id = generateId();
     const amount = data.shares * data.perShare - (data.fee || 0);
 
     execute(
       `INSERT INTO dividends (id, pay_date, ticker, name, category, shares, per_share, fee, amount)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, data.payDate, data.ticker, data.name || '', data.category, data.shares, data.perShare, data.fee || 0, amount]
+      [
+        id,
+        data.payDate,
+        data.ticker,
+        data.name || '',
+        data.category,
+        data.shares,
+        data.perShare,
+        data.fee || 0,
+        amount,
+      ],
     );
 
     loadDividends(currentFilters.value);
     return id;
-  };
+  }
 
-  const updateDividend = (id: string, data: DividendInput): void => {
+  function updateDividend(id: string, data: DividendInput): void {
     const amount = data.shares * data.perShare - (data.fee || 0);
 
     execute(
       `UPDATE dividends SET pay_date=?, ticker=?, name=?, category=?, shares=?, per_share=?, fee=?, amount=? WHERE id=?`,
-      [data.payDate, data.ticker, data.name || '', data.category, data.shares, data.perShare, data.fee || 0, amount, id]
+      [
+        data.payDate,
+        data.ticker,
+        data.name || '',
+        data.category,
+        data.shares,
+        data.perShare,
+        data.fee || 0,
+        amount,
+        id,
+      ],
     );
 
     loadDividends(currentFilters.value);
-  };
+  }
 
-  const deleteDividend = (id: string): void => {
+  function deleteDividend(id: string): void {
     execute('DELETE FROM dividends WHERE id = ?', [id]);
     loadDividends(currentFilters.value);
-  };
+  }
 
-  const getYearlyStats = (): YearlyStat[] => {
+  function getYearlyStats(): YearlyStat[] {
     const sql = `
       SELECT strftime('%Y', pay_date) as year,
              SUM(CASE WHEN category = 'cash' THEN amount ELSE 0 END) as cash_dividend,
@@ -124,13 +145,13 @@ export function useDividends() {
       ORDER BY year DESC
     `;
     return query(sql) as unknown as YearlyStat[];
-  };
+  }
 
-  const getAvailableYears = (): string[] => {
+  function getAvailableYears(): string[] {
     const sql = `SELECT DISTINCT strftime('%Y', pay_date) as year FROM dividends ORDER BY year DESC`;
     const result = query(sql) as { year: string }[];
     return result.map(r => r.year);
-  };
+  }
 
   return {
     dividends,
@@ -139,6 +160,6 @@ export function useDividends() {
     updateDividend,
     deleteDividend,
     getYearlyStats,
-    getAvailableYears
+    getAvailableYears,
   };
 }

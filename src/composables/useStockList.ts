@@ -1,6 +1,7 @@
-import { ref } from 'vue';
-import { getDatabase, saveDatabase } from '../db';
 import type { SqlValue } from 'sql.js/dist/sql-wasm.js';
+import { ref } from 'vue';
+
+import { getDatabase, saveDatabase } from '../db';
 
 interface Stock {
   ticker: string;
@@ -27,7 +28,10 @@ export function useStockList() {
     if (db) {
       const result = db.exec('SELECT ticker, name FROM stocks ORDER BY ticker');
       if (result.length > 0 && result[0].values.length > 0) {
-        stockList.value = result[0].values.map((row: SqlValue[]) => ({ ticker: row[0] as string, name: row[1] as string }));
+        stockList.value = result[0].values.map((row: SqlValue[]) => ({
+          ticker: row[0] as string,
+          name: row[1] as string,
+        }));
         isLoading.value = false;
         return stockList.value;
       }
@@ -36,13 +40,10 @@ export function useStockList() {
     try {
       const [stockResponse, etfResponse] = await Promise.all([
         fetch('/api/twse/v1/exchangeReport/BWIBBU_d'),
-        fetch('/api/twse/v1/exchangeReport/TWT53U')
+        fetch('/api/twse/v1/exchangeReport/TWT53U'),
       ]);
 
-      const [stockData, etfData] = await Promise.all([
-        stockResponse.json(),
-        etfResponse.json()
-      ]);
+      const [stockData, etfData] = await Promise.all([stockResponse.json(), etfResponse.json()]);
 
       const stockMap = new Map<string, string>();
 
@@ -62,7 +63,7 @@ export function useStockList() {
 
       const stocks: Stock[] = Array.from(stockMap.entries()).map(([ticker, name]) => ({
         ticker,
-        name
+        name,
       }));
 
       if (db && stocks.length > 0) {
@@ -91,7 +92,10 @@ export function useStockList() {
     if (!exists) {
       const db = getDatabase();
       if (db) {
-        db.run('INSERT OR REPLACE INTO stocks (ticker, name) VALUES (?, ?)', [stock.ticker, stock.name || '']);
+        db.run('INSERT OR REPLACE INTO stocks (ticker, name) VALUES (?, ?)', [
+          stock.ticker,
+          stock.name || '',
+        ]);
         await saveDatabase();
       }
 
@@ -100,7 +104,7 @@ export function useStockList() {
     }
   };
 
-  const searchStocks = (query: string): Stock[] => {
+  function searchStocks(query: string): Stock[] {
     if (!query || query.length < 1) return [];
 
     const q = query.toUpperCase();
@@ -121,13 +125,13 @@ export function useStockList() {
     });
 
     return results.slice(0, 15);
-  };
+  }
 
   return {
     stockList,
     isLoading,
     loadStockList,
     addStock,
-    searchStocks
+    searchStocks,
   };
 }

@@ -1,7 +1,8 @@
 <script setup lang="ts">
+import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { Doughnut } from 'vue-chartjs';
-import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
+
 import { useDatabase } from '../composables/useDatabase';
 import { usePortfolio, type Holding } from '../composables/usePortfolio';
 import { useStockPrice } from '../composables/useStockPrice';
@@ -29,7 +30,7 @@ const summary = ref<PortfolioSummary>({
   holdings: [],
   totalCost: 0,
   totalValue: 0,
-  totalUnrealized: 0
+  totalUnrealized: 0,
 });
 
 const isLoadingPrices = ref(false);
@@ -37,7 +38,7 @@ const lastUpdate = ref<string | null>(null);
 const tickerDistribution = ref<DistributionData[]>([]);
 let priceUpdateInterval: ReturnType<typeof setInterval> | null = null;
 
-const isMarketHours = (): boolean => {
+function isMarketHours(): boolean {
   const now = new Date();
   const day = now.getDay();
   const hours = now.getHours();
@@ -47,65 +48,73 @@ const isMarketHours = (): boolean => {
   if (day === 0 || day === 6) return false;
   if (timeInMinutes < 9 * 60 || timeInMinutes > 13 * 60 + 30) return false;
   return true;
-};
+}
 
-const startPriceUpdateTimer = () => {
+function startPriceUpdateTimer() {
   if (priceUpdateInterval) return;
 
-  priceUpdateInterval = setInterval(() => {
-    if (isMarketHours() && summary.value.holdings.length > 0) {
-      fetchAllPrices();
-    }
-  }, 5 * 60 * 1000);
-};
+  priceUpdateInterval = setInterval(
+    () => {
+      if (isMarketHours() && summary.value.holdings.length > 0) {
+        fetchAllPrices();
+      }
+    },
+    5 * 60 * 1000,
+  );
+}
 
-const stopPriceUpdateTimer = () => {
+function stopPriceUpdateTimer() {
   if (priceUpdateInterval) {
     clearInterval(priceUpdateInterval);
     priceUpdateInterval = null;
   }
-};
+}
 
-const loadData = () => {
+function loadData() {
   const data = getPortfolioSummary();
   const holdings = data.holdings.filter(h => h.shares > 0);
 
   const totalCost = holdings.reduce((sum, h) => sum + h.total_cost, 0);
-  const totalValue = holdings.reduce((sum, h) => sum + (h.currentPrice || h.avg_cost) * h.shares, 0);
+  const totalValue = holdings.reduce(
+    (sum, h) => sum + (h.currentPrice || h.avg_cost) * h.shares,
+    0,
+  );
   const totalUnrealized = holdings.reduce((sum, h) => sum + (h.unrealizedGain || 0), 0);
 
   summary.value = {
     holdings,
     totalCost,
     totalValue,
-    totalUnrealized
+    totalUnrealized,
   };
   loadTickerDistribution();
-};
+}
 
-const loadTickerDistribution = () => {
+function loadTickerDistribution() {
   tickerDistribution.value = summary.value.holdings.map(h => ({
     ticker: h.ticker,
     name: h.name,
-    value: (h.currentPrice || h.avg_cost) * h.shares
+    value: (h.currentPrice || h.avg_cost) * h.shares,
   }));
-};
+}
 
 const distributionChartData = computed(() => ({
   labels: tickerDistribution.value.map(t => t.name),
-  datasets: [{
-    data: tickerDistribution.value.map(t => t.value),
-    backgroundColor: [
-      '#00d9ff',
-      '#ff6b6b',
-      '#4ecdc4',
-      '#ffe66d',
-      '#95e1d3',
-      '#f38181',
-      '#aa96da',
-      '#fcbad3'
-    ]
-  }]
+  datasets: [
+    {
+      data: tickerDistribution.value.map(t => t.value),
+      backgroundColor: [
+        '#00d9ff',
+        '#ff6b6b',
+        '#4ecdc4',
+        '#ffe66d',
+        '#95e1d3',
+        '#f38181',
+        '#aa96da',
+        '#fcbad3',
+      ],
+    },
+  ],
 }));
 
 const distributionChartOptions = {
@@ -113,17 +122,17 @@ const distributionChartOptions = {
   maintainAspectRatio: false,
   plugins: {
     legend: {
-      position: 'right' as const
+      position: 'right' as const,
     },
     tooltip: {
       callbacks: {
         label: (ctx: any) => {
           const item = tickerDistribution.value[ctx.dataIndex];
           return `${item.name} (${item.ticker}): ${item.value.toLocaleString()}`;
-        }
-      }
-    }
-  }
+        },
+      },
+    },
+  },
 };
 
 const fetchAllPrices = async () => {
@@ -146,7 +155,7 @@ const fetchAllPrices = async () => {
   }
 };
 
-watch(isReady, (ready) => {
+watch(isReady, ready => {
   if (ready) {
     loadData();
   }
@@ -190,7 +199,9 @@ onUnmounted(() => {
         <v-card class="rounded-lg h-full" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
           <v-card-text>
             <div class="text-body-small text-grey">總成本</div>
-            <div class="text-body-large font-weight-bold">{{ summary.totalCost.toLocaleString() }}</div>
+            <div class="text-body-large font-weight-bold">
+              {{ summary.totalCost.toLocaleString() }}
+            </div>
           </v-card-text>
         </v-card>
       </v-col>
@@ -198,7 +209,9 @@ onUnmounted(() => {
         <v-card class="rounded-lg h-full" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
           <v-card-text>
             <div class="text-body-small text-grey">總市值</div>
-            <div class="text-body-large font-weight-bold">{{ summary.totalValue.toLocaleString() }}</div>
+            <div class="text-body-large font-weight-bold">
+              {{ summary.totalValue.toLocaleString() }}
+            </div>
           </v-card-text>
         </v-card>
       </v-col>
@@ -206,8 +219,12 @@ onUnmounted(() => {
         <v-card class="rounded-lg h-full" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
           <v-card-text>
             <div class="text-body-small text-grey">未實現損益</div>
-            <div class="text-body-large font-weight-bold" :class="summary.totalUnrealized >= 0 ? 'text-success' : 'text-error'">
-              {{ summary.totalUnrealized >= 0 ? '+' : '' }}{{ summary.totalUnrealized.toLocaleString() }}
+            <div
+              class="text-body-large font-weight-bold"
+              :class="summary.totalUnrealized >= 0 ? 'text-success' : 'text-error'"
+            >
+              {{ summary.totalUnrealized >= 0 ? '+' : ''
+              }}{{ summary.totalUnrealized.toLocaleString() }}
             </div>
           </v-card-text>
         </v-card>
@@ -260,13 +277,15 @@ onUnmounted(() => {
                 class="text-right"
                 :class="(h.unrealizedGain || 0) >= 0 ? 'text-success' : 'text-error'"
               >
-                {{ (h.unrealizedGain || 0) >= 0 ? '+' : '' }}{{ (h.unrealizedGain || 0).toLocaleString() }}
+                {{ (h.unrealizedGain || 0) >= 0 ? '+' : ''
+                }}{{ (h.unrealizedGain || 0).toLocaleString() }}
               </td>
               <td
                 class="text-right"
                 :class="(h.unrealizedGainPercent || 0) >= 0 ? 'text-success' : 'text-error'"
               >
-                {{ (h.unrealizedGainPercent || 0) >= 0 ? '+' : '' }}{{ (h.unrealizedGainPercent || 0).toFixed(2) }}%
+                {{ (h.unrealizedGainPercent || 0) >= 0 ? '+' : ''
+                }}{{ (h.unrealizedGainPercent || 0).toFixed(2) }}%
               </td>
             </tr>
             <tr v-if="summary.holdings.length === 0">
