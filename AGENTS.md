@@ -23,8 +23,8 @@ The project is a Vue 3 investment performance tracking web app.
 - Database: sql.js (WASM version) with IndexedDB persistence
 - Charts: Chart.js + vue-chartjs
 - Routing: Vue Router
-- State: Pinia
-- Type Checking: vue-tsc (no ESLint)
+- Type Checking: vue-tsc
+- Linting & Formatting: oxlint + oxfmt
 
 ### Key Composables
 
@@ -40,6 +40,15 @@ The project is a Vue 3 investment performance tracking web app.
 - Uses sql.js WASM version for SQLite in browser
 - WASM file copied to dist via `vite-plugin-static-copy`
 - Data persisted in IndexedDB under database name `invest_perf`
+
+### Database Tables
+
+- `transactions`: Buy/sell records
+- `dividends`: Cash and stock dividends
+- `prices`: Current stock prices
+- `stocks`: Stock ticker/name mapping
+- `annual_performance`: Yearly performance data
+- `historical_prices`: Historical price data
 
 ### API Configuration
 
@@ -64,17 +73,18 @@ The project is a Vue 3 investment performance tracking web app.
 ### Build Commands
 
 - Build the project: `pnpm build`
+- Development server: `pnpm dev` (do not start automatically, only when explicitly requested)
 
 ### Type Checking
 
 - Run type check: `pnpm typecheck`
-- No ESLint configured (using vue-tsc for type checking only)
 
 ### Linting & Formatting
 
 - Lint: `pnpm lint`
 - Lint & Fix: `pnpm lint:fix`
 - Format: `pnpm fmt`
+- Format Check: `pnpm fmt:check`
 
 ## Code Style Guidelines
 
@@ -160,28 +170,6 @@ The project is a Vue 3 investment performance tracking web app.
   - `chore: update dependencies`
 - Keep subject line under 50 characters
 - Reference issue numbers when applicable
-
-#### Creating Commits
-
-When asked to create a commit:
-
-1. Analyze the current changes to determine what was modified
-2. Write a descriptive commit message following conventional commits format
-3. Always include the following Co-authored-by trailer:
-   ```
-   Co-authored-by: OpenCode <opencode@users.noreply.github.com>
-   ```
-4. Example commit structure:
-
-   ```
-   feat: add date picker confirm buttons
-
-   - Modified v-menu to prevent auto-close
-   - Added confirm buttons using v-date-picker #actions slot
-   - Applied accent color to selected dates
-
-   Co-authored-by: OpenCode <opencode@users.noreply.github.com>
-   ```
 
 ## Additional Notes
 
