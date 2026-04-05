@@ -35,13 +35,6 @@ export interface DividendInput {
   fee?: number;
 }
 
-export interface YearlyStat {
-  year: string;
-  cash_dividend: number;
-  stock_dividend: number;
-  count: number;
-}
-
 export function useDividends() {
   const { query, execute } = useDatabase();
   const dividends = ref<Dividend[]>([]);
@@ -134,23 +127,23 @@ export function useDividends() {
     loadDividends(currentFilters.value);
   }
 
-  function getYearlyStats(): YearlyStat[] {
-    const sql = `
-      SELECT strftime('%Y', pay_date) as year,
-             SUM(CASE WHEN category = 'cash' THEN amount ELSE 0 END) as cash_dividend,
-             SUM(CASE WHEN category = 'stock' THEN shares * per_share ELSE 0 END) as stock_dividend,
-             COUNT(*) as count
-      FROM dividends
-      GROUP BY year
-      ORDER BY year DESC
-    `;
-    return query(sql) as unknown as YearlyStat[];
-  }
-
   function getAvailableYears(): string[] {
     const sql = `SELECT DISTINCT strftime('%Y', pay_date) as year FROM dividends ORDER BY year DESC`;
     const result = query(sql) as { year: string }[];
     return result.map(r => r.year);
+  }
+
+  function getDividendsByTicker(ticker: string, year: number): number {
+    const startDate = `${year}-01-01`;
+    const endDate = `${year}-12-31`;
+    const sql = `
+      SELECT COALESCE(SUM(CASE WHEN category = 'cash' THEN amount ELSE 0 END), 0) +
+             COALESCE(SUM(CASE WHEN category = 'stock' THEN shares * per_share ELSE 0 END), 0) as total
+      FROM dividends
+      WHERE ticker = ? AND pay_date >= ? AND pay_date <= ?
+    `;
+    const result = query(sql, [ticker, startDate, endDate]) as { total: number }[];
+    return result[0]?.total || 0;
   }
 
   return {
@@ -159,7 +152,7 @@ export function useDividends() {
     addDividend,
     updateDividend,
     deleteDividend,
-    getYearlyStats,
     getAvailableYears,
+    getDividendsByTicker,
   };
 }

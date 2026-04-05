@@ -32,7 +32,7 @@ ChartJS.register(
 
 const { isReady, query, execute } = useDatabase();
 const { transactions, loadTransactions } = useTransactions();
-const { dividends, loadDividends, getYearlyStats } = useDividends();
+const { dividends, loadDividends, getDividendsByTicker } = useDividends();
 const { getPortfolioSummary, getRealizedGain } = usePortfolio();
 const { fetchHistoricalPrice } = useStockPrice();
 
@@ -83,8 +83,6 @@ async function loadStats() {
     stats.value.realizedGain + stats.value.totalDividend + summary.totalUnrealized;
   stats.value.buyCount = transactions.value.filter(t => t.type === 'buy').length;
   stats.value.sellCount = transactions.value.filter(t => t.type === 'sell').length;
-
-  yearlyDividends.value = getYearlyStats();
 
   await checkAndRecalculate();
 }
@@ -167,7 +165,9 @@ async function loadAnnualPerformance() {
     const yearData = stockYearlyData.get(year)!;
 
     for (const [ticker, data] of yearData) {
-      const avgPrice = data.totalCost / data.boughtShares;
+      const stockDividend = getDividendsByTicker(ticker, year);
+      const avgPrice = (data.totalCost - stockDividend) / data.boughtShares;
+
       const lastDay = year == currentYear ? today : `${year}-12-31`;
       const lastDayPrice = (await fetchHistoricalPrice(ticker, lastDay)) || 0;
       const remainingShares = data.boughtShares - data.soldShares;
@@ -425,15 +425,27 @@ onMounted(() => {
                   >
                 </template>
                 <ul class="ma-0 pa-2">
-                  <li>已實現報酬成本 = Σ(股票買入均價 × 賣出股數)</li>
-                  <li>未實現報酬成本 = Σ(股票買入均價 × 剩餘股數)</li>
-                  <li>已實現報酬率 = (Σ(股票賣出價 × 賣出股數) - 已實現報酬成本) / 已實現報酬成本 × 100%</li>
                   <li>
-                    未實現報酬率 = (Σ(年末剩餘股票收盤價 × 剩餘股數) - 未實現報酬成本) / 未實現報酬成本 × 100%
+                    已實現報酬成本 = Σ(股票買入均價 × 賣出股數 - 實發股利 × 賣出股數/總初始股數)
                   </li>
-                  <li>總報酬率 = 已實現報酬率 × 已實現報酬成本/總報酬成本 + 未實現報酬率 × 未實現報酬成本/總報酬成本</li>
+                  <li>
+                    未實現報酬成本 = Σ(股票買入均價 × 剩餘股數 - 實發股利 × 剩餘股數/總初始股數)
+                  </li>
+                  <li>
+                    已實現報酬率 = (Σ(股票賣出價 × 賣出股數) - 已實現報酬成本) / 已實現報酬成本 ×
+                    100%
+                  </li>
+                  <li>
+                    未實現報酬率 = (Σ(年末剩餘股票收盤價 × 剩餘股數) - 未實現報酬成本) /
+                    未實現報酬成本 × 100%
+                  </li>
+                  <li>
+                    總報酬率 = 已實現報酬率 × 已實現報酬成本/總報酬成本 + 未實現報酬率 ×
+                    未實現報酬成本/總報酬成本
+                  </li>
+                  <li>購買手續費會記入成本，賣出手續費和交易稅會從收入扣除</li>
+                  <li>實發股利平攤地從成本扣除</li>
                   <li>剩餘股票以當年年末收盤價作為成本價留到隔年繼續計算</li>
-                  <li>已考量手續費和交易稅</li>
                 </ul>
               </v-tooltip>
             </div>
