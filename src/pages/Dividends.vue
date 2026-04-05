@@ -257,7 +257,14 @@ onMounted(() => {
             <v-col cols="12" sm="6" md="3">
               <v-menu v-model="date_menu" :close-on-content-click="false" :close-on-esc="false">
                 <template #activator="{ props }">
-                  <v-text-field v-model="form.pay_date" />
+                  <v-text-field
+                    v-model="form.pay_date"
+                    label="發放日"
+                    variant="outlined"
+                    density="compact"
+                    readonly
+                    v-bind="props"
+                  />
                 </template>
                 <v-date-picker v-model="form.pay_date_picker" hide-title color="primary">
                   <template #actions>
