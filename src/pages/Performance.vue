@@ -10,11 +10,12 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
+import katex from 'katex';
 import { ref, onMounted, watch, computed } from 'vue';
 import { Chart } from 'vue-chartjs';
 
 import { useDatabase } from '../composables/useDatabase';
-import { useDividends, type YearlyStat } from '../composables/useDividends';
+import { useDividends } from '../composables/useDividends';
 import { usePortfolio } from '../composables/usePortfolio';
 import { useStockPrice } from '../composables/useStockPrice';
 import { useTransactions } from '../composables/useTransactions';
@@ -67,7 +68,6 @@ interface AnnualData {
   totalReturnRate: number;
 }
 
-const yearlyDividends = ref<YearlyStat[]>([]);
 const annualPerformance = ref<AnnualData[]>([]);
 
 async function loadStats() {
@@ -420,32 +420,69 @@ onMounted(() => {
               <span class="text-base font-semibold">年度報酬率</span>
               <v-tooltip origin="start center" transition="scale-transition">
                 <template v-slot:activator="{ props }">
-                  <v-icon v-bind="props" size="small" class="ml-1" color="grey"
-                    >mdi-help-circle-outline</v-icon
-                  >
+                  <v-icon v-bind="props" size="small" class="ml-1" color="grey">
+                    mdi-help-circle-outline
+                  </v-icon>
                 </template>
-                <ul class="ma-0 pa-2">
+                <ul class="pa-0 ml-4">
                   <li>
-                    已實現報酬成本 = Σ(股票買入均價 × 賣出股數 - 實發股利 × 賣出股數/總初始股數)
+                    <span
+                      class="text-body-small"
+                      v-html="
+                        katex.renderToString(
+                          '已實現報酬成本 = \\sum (買入均價 \\times 賣出股數 - 實發股利 \\times \\dfrac{賣出股數}{總初始股數})',
+                          { throwOnError: false },
+                        )
+                      "
+                    />
                   </li>
-                  <li>
-                    未實現報酬成本 = Σ(股票買入均價 × 剩餘股數 - 實發股利 × 剩餘股數/總初始股數)
+                  <li class="mt-2">
+                    <span
+                      class="text-body-small"
+                      v-html="
+                        katex.renderToString(
+                          '未實現報酬成本 = \\sum (買入均價 \\times 剩餘股數 - 實發股利 \\times \\dfrac{剩餘股數}{總初始股數})',
+                          { throwOnError: false },
+                        )
+                      "
+                    />
                   </li>
-                  <li>
-                    已實現報酬率 = (Σ(股票賣出價 × 賣出股數) - 已實現報酬成本) / 已實現報酬成本 ×
-                    100%
+                  <li class="mt-2">
+                    <span
+                      class="text-body-small"
+                      v-html="
+                        katex.renderToString(
+                          '已實現報酬率 = \\dfrac{\\sum (賣出價 \\times 賣出股數) - 已實現報酬成本}{已實現報酬成本} \\times 100\\%',
+                          { throwOnError: false },
+                        )
+                      "
+                    />
                   </li>
-                  <li>
-                    未實現報酬率 = (Σ(年末剩餘股票收盤價 × 剩餘股數) - 未實現報酬成本) /
-                    未實現報酬成本 × 100%
+                  <li class="mt-2">
+                    <span
+                      class="text-body-small"
+                      v-html="
+                        katex.renderToString(
+                          '未實現報酬率 = \\dfrac{\\sum (期末收盤價 \\times 賣出股數) - 未實現報酬成本}{未實現報酬成本} \\times 100\\%',
+                          { throwOnError: false },
+                        )
+                      "
+                    />
                   </li>
-                  <li>
-                    總報酬率 = 已實現報酬率 × 已實現報酬成本/總報酬成本 + 未實現報酬率 ×
-                    未實現報酬成本/總報酬成本
+                  <li class="mt-2">
+                    <span
+                      class="text-body-small"
+                      v-html="
+                        katex.renderToString(
+                          '總報酬率 = 已實現報酬率 \\times \\dfrac{賣出股數}{總初始股數} + 未實現報酬率 \\times \\dfrac{剩餘股數}{總初始股數}',
+                          { throwOnError: false },
+                        )
+                      "
+                    />
                   </li>
-                  <li>購買手續費會記入成本，賣出手續費和交易稅會從收入扣除</li>
-                  <li>實發股利平攤地從成本扣除</li>
-                  <li>剩餘股票以當年年末收盤價作為成本價留到隔年繼續計算</li>
+                  <li class="mt-1">購買手續費會記入成本，賣出手續費和交易稅會從收入扣除</li>
+                  <li class="mt-1">實發股利會被拿來平攤成本</li>
+                  <li class="mt-1">剩餘股票以當年年末收盤價作為成本價留到隔年繼續計算</li>
                 </ul>
               </v-tooltip>
             </div>

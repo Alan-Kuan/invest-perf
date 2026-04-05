@@ -16,6 +16,7 @@
   "dependencies": {
     "@mdi/font": "^7.4.47",
     "chart.js": "^4.5.1",
+    "katex": "^0.16.44",
     "sql.js": "^1.14.1",
     "vue": "^3.5.31",
     "vue-chartjs": "^5.3.3",
