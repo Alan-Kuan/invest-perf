@@ -9,6 +9,7 @@ import {
   Title,
   Tooltip,
   Legend,
+  Filler,
 } from 'chart.js';
 import katex from 'katex';
 import { ref, onMounted, watch, computed } from 'vue';
@@ -29,6 +30,7 @@ ChartJS.register(
   Title,
   Tooltip,
   Legend,
+  Filler,
 );
 
 const { isReady, query, execute } = useDatabase();
@@ -66,6 +68,7 @@ interface AnnualData {
   realizedReturnRate: number;
   unrealizedReturnRate: number;
   totalReturnRate: number;
+  totalGain: number;
 }
 
 const annualPerformance = ref<AnnualData[]>([]);
@@ -151,13 +154,14 @@ async function loadAnnualPerformance() {
         realizedReturnRate: 0,
         unrealizedReturnRate: 0,
         totalReturnRate: 0,
+        totalGain: 0,
       });
       continue;
     }
 
     const yearNext = year + 1;
-    let realizedReturnRate = 0;
-    let unrealizedReturnRate = 0;
+    let totalRealizedGain = 0;
+    let totalUnrealizedGain = 0;
     let totalReturnRate = 0;
     let realizedTotalCost = 0;
     let unrealizedTotalCost = 0;
@@ -175,8 +179,8 @@ async function loadAnnualPerformance() {
       const realizedGain = data.totalProceeds - data.soldShares * avgPrice;
       const unrealizedGain = remainingShares * (lastDayPrice - avgPrice);
 
-      realizedReturnRate += realizedGain;
-      unrealizedReturnRate += unrealizedGain;
+      totalRealizedGain += realizedGain;
+      totalUnrealizedGain += unrealizedGain;
       realizedTotalCost += data.soldShares * avgPrice;
       unrealizedTotalCost += remainingShares * avgPrice;
 
@@ -204,15 +208,16 @@ async function loadAnnualPerformance() {
     }
 
     totalReturnRate =
-      (realizedReturnRate + unrealizedReturnRate) / (realizedTotalCost + unrealizedTotalCost);
-    realizedReturnRate = realizedTotalCost > 0 ? realizedReturnRate / realizedTotalCost : 0;
-    unrealizedReturnRate = unrealizedTotalCost > 0 ? unrealizedReturnRate / unrealizedTotalCost : 0;
+      (totalRealizedGain + totalUnrealizedGain) / (realizedTotalCost + unrealizedTotalCost);
+    const realizedReturnRate = realizedTotalCost > 0 ? totalRealizedGain / realizedTotalCost : 0;
+    const unrealizedReturnRate = unrealizedTotalCost > 0 ? totalUnrealizedGain / unrealizedTotalCost : 0;
 
     annualDataList.push({
       year,
       realizedReturnRate,
       unrealizedReturnRate,
       totalReturnRate,
+      totalGain: totalRealizedGain + totalUnrealizedGain,
     });
   }
 
@@ -226,6 +231,7 @@ async function loadAnnualPerformanceCache(): Promise<AnnualData[]> {
     realized_return_rate: number;
     unrealized_return_rate: number;
     total_return_rate: number;
+    total_gain: number;
   }[];
 
   if (cached.length === 0) return [];
@@ -235,6 +241,7 @@ async function loadAnnualPerformanceCache(): Promise<AnnualData[]> {
     realizedReturnRate: c.realized_return_rate,
     unrealizedReturnRate: c.unrealized_return_rate,
     totalReturnRate: c.total_return_rate,
+    totalGain: c.total_gain,
   }));
 }
 
@@ -242,9 +249,9 @@ async function saveAnnualPerformanceCache(data: AnnualData[]): Promise<void> {
   for (const d of data) {
     execute(
       `INSERT OR REPLACE INTO annual_performance
-       (year, realized_return_rate, unrealized_return_rate, total_return_rate, calculated_at)
-       VALUES (?, ?, ?, ?, datetime('now'))`,
-      [d.year, d.realizedReturnRate || 0, d.unrealizedReturnRate || 0, d.totalReturnRate || 0],
+       (year, realized_return_rate, unrealized_return_rate, total_return_rate, total_gain, calculated_at)
+       VALUES (?, ?, ?, ?, ?, datetime('now'))`,
+      [d.year, d.realizedReturnRate || 0, d.unrealizedReturnRate || 0, d.totalReturnRate || 0, d.totalGain || 0],
     );
   }
 }
@@ -287,32 +294,58 @@ async function checkAndRecalculate(): Promise<void> {
   }
 }
 
-const performanceChartData = computed(() => ({
-  labels: annualPerformance.value.map(a => a.year),
-  datasets: [
-    {
-      label: '總報酬率',
-      data: annualPerformance.value.map(a => a.totalReturnRate * 100),
-      backgroundColor: '#4caf50',
-      borderRadius: 4,
-      barPercentage: 0.6,
-    },
-    {
-      label: '已實現',
-      data: annualPerformance.value.map(a => a.realizedReturnRate * 100),
-      backgroundColor: '#2196f3',
-      borderRadius: 4,
-      barPercentage: 0.6,
-    },
-    {
-      label: '未實現',
-      data: annualPerformance.value.map(a => a.unrealizedReturnRate * 100),
-      backgroundColor: '#ff9800',
-      borderRadius: 4,
-      barPercentage: 0.6,
-    },
-  ],
-}));
+const performanceChartData = computed(() => {
+  return {
+    labels: annualPerformance.value.map(a => a.year),
+    datasets: [
+      {
+        label: '總報酬率',
+        data: annualPerformance.value.map(a => a.totalReturnRate * 100),
+        backgroundColor: '#4caf50',
+        borderRadius: 4,
+        barPercentage: 0.6,
+      },
+      {
+        label: '已實現',
+        data: annualPerformance.value.map(a => a.realizedReturnRate * 100),
+        backgroundColor: '#2196f3',
+        borderRadius: 4,
+        barPercentage: 0.6,
+      },
+      {
+        label: '未實現',
+        data: annualPerformance.value.map(a => a.unrealizedReturnRate * 100),
+        backgroundColor: '#ff9800',
+        borderRadius: 4,
+        barPercentage: 0.6,
+      },
+    ],
+  };
+});
+
+const cumulativeChartData = computed(() => {
+  const cumulativeData: number[] = [];
+  let runningTotal = 0;
+
+  for (const a of annualPerformance.value) {
+    runningTotal += a.totalGain;
+    cumulativeData.push(runningTotal);
+  }
+
+  return {
+    labels: annualPerformance.value.map(a => a.year),
+    datasets: [
+      {
+        label: '累積損益',
+        data: cumulativeData,
+        borderColor: '#9c27b0',
+        backgroundColor: 'rgba(156, 39, 176, 0.1)',
+        fill: true,
+        tension: 0.3,
+      },
+    ],
+  };
+});
 
 const performanceChartOptions = {
   responsive: true,
@@ -343,6 +376,40 @@ const performanceChartOptions = {
   },
 };
 
+const cumulativeChartOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: {
+      position: 'bottom' as const,
+    },
+    tooltip: {
+      callbacks: {
+        label: (context: any) => {
+          const value = context.raw ?? 0;
+          const prefix = value >= 0 ? '+' : '';
+          return [`${context.dataset.label}: ${prefix}${Number(value).toLocaleString()}`];
+        },
+      },
+    },
+  },
+  scales: {
+    x: {
+      grid: {
+        display: false,
+      },
+    },
+    y: {
+      ticks: {
+        callback: (value: number | string) => {
+          const v = Number(value);
+          return v >= 0 ? '+' + v.toLocaleString() : v.toLocaleString();
+        },
+      },
+    },
+  },
+};
+
 watch(isReady, ready => {
   if (ready) {
     loadStats();
@@ -358,7 +425,12 @@ onMounted(() => {
 
 <template>
   <div>
-    <h2 class="text-headline-small mb-4">投資績效</h2>
+    <div class="d-flex align-center mb-4">
+      <h2 class="text-headline-small">投資績效</h2>
+      <v-btn class="ml-auto" variant="tonal" size="small" :loading="isLoading" @click="handleRefresh">
+        重新計算
+      </v-btn>
+    </div>
 
     <v-row class="mb-4" align="stretch">
       <v-col v-for="i in 5" :key="i" sm="6" md="4" lg="2" class="d-flex align-stretch">
@@ -413,7 +485,7 @@ onMounted(() => {
     </v-row>
 
     <v-row>
-      <v-col cols="6">
+      <v-col cols="12" md="6">
         <v-card class="mb-4 rounded-lg" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
           <v-card-item>
             <div class="d-flex align-center">
@@ -486,11 +558,6 @@ onMounted(() => {
                 </ul>
               </v-tooltip>
             </div>
-            <template v-slot:append>
-              <v-btn icon size="small" variant="text" :loading="isLoading" @click="handleRefresh">
-                <v-icon size="small">mdi-refresh</v-icon>
-              </v-btn>
-            </template>
           </v-card-item>
           <v-card-text>
             <div style="height: 250px">
@@ -499,6 +566,35 @@ onMounted(() => {
                 type="bar"
                 :data="performanceChartData"
                 :options="performanceChartOptions"
+              />
+              <div v-else class="d-flex align-center justify-center h-100 text-grey">尚無資料</div>
+            </div>
+          </v-card-text>
+        </v-card>
+      </v-col>
+
+      <v-col cols="12" md="6">
+        <v-card class="mb-4 rounded-lg" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
+          <v-card-item>
+            <div class="d-flex align-center">
+              <span class="text-base font-semibold">年度累積損益</span>
+              <v-tooltip origin="start center" transition="scale-transition">
+                <template v-slot:activator="{ props }">
+                  <v-icon v-bind="props" size="small" class="ml-1" color="grey">
+                    mdi-help-circle-outline
+                  </v-icon>
+                </template>
+                <span class="text-body-small">從第一年到該年的累積損益金額</span>
+              </v-tooltip>
+            </div>
+          </v-card-item>
+          <v-card-text>
+            <div style="height: 250px">
+              <Chart
+                v-if="annualPerformance.length > 0"
+                type="line"
+                :data="cumulativeChartData"
+                :options="cumulativeChartOptions"
               />
               <div v-else class="d-flex align-center justify-center h-100 text-grey">尚無資料</div>
             </div>
