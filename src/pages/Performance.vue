@@ -33,84 +33,84 @@ ChartJS.register(
   Filler,
 );
 
-const { isReady, query, execute } = useDatabase();
+const { is_ready, query, execute } = useDatabase();
 const { transactions, loadTransactions } = useTransactions();
 const { dividends, loadDividends, getDividendsByTicker } = useDividends();
 const { getPortfolioSummary, getRealizedGain } = usePortfolio();
 const { fetchHistoricalPrice } = useStockPrice();
 
-const isLoading = ref(false);
+const is_loading = ref(false);
 
 interface PerformanceStats {
-  realizedGain: number;
-  unrealizedGain: number;
-  totalDividend: number;
-  totalReturn: number;
-  buyCount: number;
-  sellCount: number;
-  winCount: number;
-  loseCount: number;
+  realized_gain: number;
+  unrealized_gain: number;
+  total_dividend: number;
+  total_return: number;
+  buy_count: number;
+  sell_count: number;
+  win_count: number;
+  lose_count: number;
 }
 
 const stats = ref<PerformanceStats>({
-  realizedGain: 0,
-  unrealizedGain: 0,
-  totalDividend: 0,
-  totalReturn: 0,
-  buyCount: 0,
-  sellCount: 0,
-  winCount: 0,
-  loseCount: 0,
+  realized_gain: 0,
+  unrealized_gain: 0,
+  total_dividend: 0,
+  total_return: 0,
+  buy_count: 0,
+  sell_count: 0,
+  win_count: 0,
+  lose_count: 0,
 });
 
 interface AnnualData {
   year: number;
-  realizedReturnRate: number;
-  unrealizedReturnRate: number;
-  totalReturnRate: number;
-  totalGain: number;
+  realized_return_rate: number;
+  unrealized_return_rate: number;
+  total_return_rate: number;
+  total_gain: number;
 }
 
-const annualPerformance = ref<AnnualData[]>([]);
+const annual_performance = ref<AnnualData[]>([]);
 
 async function loadStats() {
-  loadTransactions({ sortOrder: 'ASC' });
-  loadDividends({ sortOrder: 'ASC' });
+  loadTransactions({ sort_order: 'ASC' });
+  loadDividends({ sort_order: 'ASC' });
 
   const summary = getPortfolioSummary();
 
-  stats.value.realizedGain = getRealizedGain();
-  stats.value.unrealizedGain = summary.totalUnrealized;
-  stats.value.totalDividend = dividends.value.reduce((sum, d) => sum + d.amount, 0);
-  stats.value.totalReturn =
-    stats.value.realizedGain + stats.value.totalDividend + summary.totalUnrealized;
-  stats.value.buyCount = transactions.value.filter(t => t.type === 'buy').length;
-  stats.value.sellCount = transactions.value.filter(t => t.type === 'sell').length;
+  stats.value.realized_gain = getRealizedGain();
+  stats.value.unrealized_gain = summary.total_unrealized;
+  stats.value.total_dividend = dividends.value.reduce((sum, d) => sum + d.amount, 0);
+  stats.value.total_return =
+    stats.value.realized_gain + stats.value.total_dividend + summary.total_unrealized;
+  stats.value.buy_count = transactions.value.filter(t => t.type === 'buy').length;
+  stats.value.sell_count = transactions.value.filter(t => t.type === 'sell').length;
 
   await checkAndRecalculate();
 }
 
 async function handleRefresh() {
-  isLoading.value = true;
+  is_loading.value = true;
   await loadAnnualPerformance();
-  isLoading.value = false;
+  is_loading.value = false;
 }
 
 async function loadAnnualPerformance() {
   if (transactions.value.length === 0) return;
 
-  const firstYear = parseInt(transactions.value[0].date.substring(0, 4));
-  const currentYear = parseInt(new Date().getFullYear().toString());
+  const first_year = parseInt(transactions.value[0].date.substring(0, 4));
+  const current_year = parseInt(new Date().getFullYear().toString());
 
-  const stockYearlyData = new Map<
+  const stock_yearly_data = new Map<
     number,
     Map<
       string,
       {
-        totalCost: number;
-        boughtShares: number;
-        totalProceeds: number;
-        soldShares: number;
+        total_cost: number;
+        bought_shares: number;
+        total_proceeds: number;
+        sold_shares: number;
       }
     >
   >();
@@ -118,111 +118,114 @@ async function loadAnnualPerformance() {
   for (const t of transactions.value) {
     const year = parseInt(t.date.substring(0, 4));
 
-    if (!stockYearlyData.has(year)) {
-      stockYearlyData.set(year, new Map());
+    if (!stock_yearly_data.has(year)) {
+      stock_yearly_data.set(year, new Map());
     }
 
-    const yearData = stockYearlyData.get(year)!;
+    const year_data = stock_yearly_data.get(year)!;
 
-    if (!yearData.has(t.ticker)) {
-      yearData.set(t.ticker, {
-        totalCost: 0,
-        boughtShares: 0,
-        totalProceeds: 0,
-        soldShares: 0,
+    if (!year_data.has(t.ticker)) {
+      year_data.set(t.ticker, {
+        total_cost: 0,
+        bought_shares: 0,
+        total_proceeds: 0,
+        sold_shares: 0,
       });
     }
 
-    const stockData = yearData.get(t.ticker)!;
+    const stock_data = year_data.get(t.ticker)!;
 
     if (t.type === 'buy') {
-      stockData.totalCost += t.net_amount;
-      stockData.boughtShares += t.shares;
+      stock_data.total_cost += t.net_amount;
+      stock_data.bought_shares += t.shares;
     } else if (t.type === 'sell') {
-      stockData.totalProceeds += t.net_amount;
-      stockData.soldShares += t.shares;
+      stock_data.total_proceeds += t.net_amount;
+      stock_data.sold_shares += t.shares;
     }
   }
 
-  const annualDataList: AnnualData[] = [];
+  const annual_data_list: AnnualData[] = [];
   const today = new Date().toISOString().split('T')[0];
 
-  for (let year = firstYear; year <= currentYear; year++) {
-    if (!stockYearlyData.has(year)) {
-      annualDataList.push({
+  for (let year = first_year; year <= current_year; year++) {
+    if (!stock_yearly_data.has(year)) {
+      annual_data_list.push({
         year,
-        realizedReturnRate: 0,
-        unrealizedReturnRate: 0,
-        totalReturnRate: 0,
-        totalGain: 0,
+        realized_return_rate: 0,
+        unrealized_return_rate: 0,
+        total_return_rate: 0,
+        total_gain: 0,
       });
       continue;
     }
 
-    const yearNext = year + 1;
-    let totalRealizedGain = 0;
-    let totalUnrealizedGain = 0;
-    let totalReturnRate = 0;
-    let realizedTotalCost = 0;
-    let unrealizedTotalCost = 0;
+    const next_year = year + 1;
+    let total_realized_gain = 0;
+    let total_unrealized_gain = 0;
+    let total_return_rate = 0;
+    let total_cost_of_realized_gain = 0;
+    let total_cost_of_unrealized_gain = 0;
 
-    const yearData = stockYearlyData.get(year)!;
+    const yearly_data = stock_yearly_data.get(year)!;
 
-    for (const [ticker, data] of yearData) {
-      const stockDividend = getDividendsByTicker(ticker, year);
-      const avgPrice = (data.totalCost - stockDividend) / data.boughtShares;
+    for (const [ticker, stock_data] of yearly_data) {
+      const dividend = getDividendsByTicker(ticker, year);
+      const avg_price = (stock_data.total_cost - dividend) / stock_data.bought_shares;
 
-      const lastDay = year == currentYear ? today : `${year}-12-31`;
-      const lastDayPrice = (await fetchHistoricalPrice(ticker, lastDay)) || 0;
-      const remainingShares = data.boughtShares - data.soldShares;
+      const last_trade_day = year == current_year ? today : `${year}-12-31`;
+      const last_trade_day_price = (await fetchHistoricalPrice(ticker, last_trade_day)) || 0;
+      const remaining_shares = stock_data.bought_shares - stock_data.sold_shares;
 
-      const realizedGain = data.totalProceeds - data.soldShares * avgPrice;
-      const unrealizedGain = remainingShares * (lastDayPrice - avgPrice);
+      const realized_gain = stock_data.total_proceeds - stock_data.sold_shares * avg_price;
+      const unrealized_gain = remaining_shares * (last_trade_day_price - avg_price);
 
-      totalRealizedGain += realizedGain;
-      totalUnrealizedGain += unrealizedGain;
-      realizedTotalCost += data.soldShares * avgPrice;
-      unrealizedTotalCost += remainingShares * avgPrice;
+      total_realized_gain += realized_gain;
+      total_unrealized_gain += unrealized_gain;
+      total_cost_of_realized_gain += stock_data.sold_shares * avg_price;
+      total_cost_of_unrealized_gain += remaining_shares * avg_price;
 
-      if (remainingShares == 0) continue;
+      if (remaining_shares == 0) continue;
 
-      if (!stockYearlyData.has(yearNext)) {
-        stockYearlyData.set(yearNext, new Map());
+      if (!stock_yearly_data.has(next_year)) {
+        stock_yearly_data.set(next_year, new Map());
       }
 
-      const yearNextData = stockYearlyData.get(yearNext)!;
+      const yearly_data_next = stock_yearly_data.get(next_year)!;
 
-      if (!yearNextData.has(ticker)) {
-        yearNextData.set(ticker, {
-          totalCost: 0,
-          boughtShares: 0,
-          totalProceeds: 0,
-          soldShares: 0,
+      if (!yearly_data_next.has(ticker)) {
+        yearly_data_next.set(ticker, {
+          total_cost: 0,
+          bought_shares: 0,
+          total_proceeds: 0,
+          sold_shares: 0,
         });
       }
 
-      const dataNextYear = yearNextData.get(ticker)!;
+      const stock_data_next_year = yearly_data_next.get(ticker)!;
 
-      dataNextYear.totalCost += remainingShares * lastDayPrice;
-      dataNextYear.boughtShares += remainingShares;
+      stock_data_next_year.total_cost += remaining_shares * last_trade_day_price;
+      stock_data_next_year.bought_shares += remaining_shares;
     }
 
-    totalReturnRate =
-      (totalRealizedGain + totalUnrealizedGain) / (realizedTotalCost + unrealizedTotalCost);
-    const realizedReturnRate = realizedTotalCost > 0 ? totalRealizedGain / realizedTotalCost : 0;
-    const unrealizedReturnRate = unrealizedTotalCost > 0 ? totalUnrealizedGain / unrealizedTotalCost : 0;
+    total_return_rate =
+      (total_realized_gain + total_unrealized_gain) /
+      (total_cost_of_realized_gain + total_cost_of_unrealized_gain);
+    const realized_return_rate =
+      total_cost_of_realized_gain > 0 ? total_realized_gain / total_cost_of_realized_gain : 0;
+    const unrealized_return_rate =
+      total_cost_of_unrealized_gain > 0 ? total_unrealized_gain / total_cost_of_unrealized_gain : 0;
 
-    annualDataList.push({
+    annual_data_list.push({
       year,
-      realizedReturnRate,
-      unrealizedReturnRate,
-      totalReturnRate,
-      totalGain: totalRealizedGain + totalUnrealizedGain,
+      realized_return_rate,
+      unrealized_return_rate,
+      total_return_rate,
+      total_gain: total_realized_gain + total_unrealized_gain,
     });
   }
 
-  annualPerformance.value = annualDataList;
-  await saveAnnualPerformanceCache(annualPerformance.value);
+  annual_performance.value = annual_data_list;
+  await saveAnnualPerformanceCache(annual_performance.value);
 }
 
 async function loadAnnualPerformanceCache(): Promise<AnnualData[]> {
@@ -238,10 +241,10 @@ async function loadAnnualPerformanceCache(): Promise<AnnualData[]> {
 
   return cached.map(c => ({
     year: c.year,
-    realizedReturnRate: c.realized_return_rate,
-    unrealizedReturnRate: c.unrealized_return_rate,
-    totalReturnRate: c.total_return_rate,
-    totalGain: c.total_gain,
+    realized_return_rate: c.realized_return_rate,
+    unrealized_return_rate: c.unrealized_return_rate,
+    total_return_rate: c.total_return_rate,
+    total_gain: c.total_gain,
   }));
 }
 
@@ -251,70 +254,76 @@ async function saveAnnualPerformanceCache(data: AnnualData[]): Promise<void> {
       `INSERT OR REPLACE INTO annual_performance
        (year, realized_return_rate, unrealized_return_rate, total_return_rate, total_gain, calculated_at)
        VALUES (?, ?, ?, ?, ?, datetime('now'))`,
-      [d.year, d.realizedReturnRate || 0, d.unrealizedReturnRate || 0, d.totalReturnRate || 0, d.totalGain || 0],
+      [
+        d.year,
+        d.realized_return_rate || 0,
+        d.unrealized_return_rate || 0,
+        d.total_return_rate || 0,
+        d.total_gain || 0,
+      ],
     );
   }
 }
 
 async function checkAndRecalculate(): Promise<void> {
-  const currentYear = new Date().getFullYear();
-  const cached = query('SELECT * FROM annual_performance WHERE year = ?', [currentYear]) as {
+  const current_year = new Date().getFullYear();
+  const cached = query('SELECT * FROM annual_performance WHERE year = ?', [current_year]) as {
     year: number;
     calculated_at: string;
   }[];
 
-  const latestTransaction = query('SELECT MAX(date) as max_date FROM transactions') as {
+  const latest_transaction = query('SELECT MAX(date) as max_date FROM transactions') as {
     max_date: string;
   }[];
-  const latestDividend = query('SELECT MAX(pay_date) as max_date FROM dividends') as {
+  const latest_dividend = query('SELECT MAX(pay_date) as max_date FROM dividends') as {
     max_date: string;
   }[];
 
-  const latestDataDate = latestTransaction[0]?.max_date || '';
-  const latestDividendDate = latestDividend[0]?.max_date || '';
+  const latest_data_date = latest_transaction[0]?.max_date || '';
+  const latest_dividend_date = latest_dividend[0]?.max_date || '';
 
-  let needRecalculate = false;
+  let need_recalculate = false;
 
   if (cached.length === 0) {
-    needRecalculate = true;
+    need_recalculate = true;
   } else {
-    const cachedDate = cached[0].calculated_at.substring(0, 10);
-    if (latestDataDate > cachedDate || latestDividendDate > cachedDate) {
-      needRecalculate = true;
+    const cached_date = cached[0].calculated_at.substring(0, 10);
+    if (latest_data_date > cached_date || latest_dividend_date > cached_date) {
+      need_recalculate = true;
     }
   }
 
-  if (needRecalculate) {
+  if (need_recalculate) {
     await loadAnnualPerformance();
   } else {
-    const cachedData = await loadAnnualPerformanceCache();
-    if (cachedData.length > 0) {
-      annualPerformance.value = cachedData;
+    const cached_data = await loadAnnualPerformanceCache();
+    if (cached_data.length > 0) {
+      annual_performance.value = cached_data;
     }
   }
 }
 
-const performanceChartData = computed(() => {
+const performance_chart_data = computed(() => {
   return {
-    labels: annualPerformance.value.map(a => a.year),
+    labels: annual_performance.value.map(a => a.year),
     datasets: [
       {
         label: '總報酬率',
-        data: annualPerformance.value.map(a => a.totalReturnRate * 100),
+        data: annual_performance.value.map(a => a.total_return_rate * 100),
         backgroundColor: '#4caf50',
         borderRadius: 4,
         barPercentage: 0.6,
       },
       {
         label: '已實現',
-        data: annualPerformance.value.map(a => a.realizedReturnRate * 100),
+        data: annual_performance.value.map(a => a.realized_return_rate * 100),
         backgroundColor: '#2196f3',
         borderRadius: 4,
         barPercentage: 0.6,
       },
       {
         label: '未實現',
-        data: annualPerformance.value.map(a => a.unrealizedReturnRate * 100),
+        data: annual_performance.value.map(a => a.unrealized_return_rate * 100),
         backgroundColor: '#ff9800',
         borderRadius: 4,
         barPercentage: 0.6,
@@ -323,21 +332,21 @@ const performanceChartData = computed(() => {
   };
 });
 
-const cumulativeChartData = computed(() => {
-  const cumulativeData: number[] = [];
-  let runningTotal = 0;
+const cumulative_chart_data = computed(() => {
+  const cumulative_data: number[] = [];
+  let running_total = 0;
 
-  for (const a of annualPerformance.value) {
-    runningTotal += a.totalGain;
-    cumulativeData.push(runningTotal);
+  for (const a of annual_performance.value) {
+    running_total += a.total_gain;
+    cumulative_data.push(running_total);
   }
 
   return {
-    labels: annualPerformance.value.map(a => a.year),
+    labels: annual_performance.value.map(a => a.year),
     datasets: [
       {
         label: '累積損益',
-        data: cumulativeData,
+        data: cumulative_data,
         borderColor: '#9c27b0',
         backgroundColor: 'rgba(156, 39, 176, 0.1)',
         fill: true,
@@ -347,7 +356,7 @@ const cumulativeChartData = computed(() => {
   };
 });
 
-const performanceChartOptions = {
+const performance_chart_options = {
   responsive: true,
   maintainAspectRatio: false,
   plugins: {
@@ -376,7 +385,7 @@ const performanceChartOptions = {
   },
 };
 
-const cumulativeChartOptions = {
+const cumulative_chart_options = {
   responsive: true,
   maintainAspectRatio: false,
   plugins: {
@@ -410,14 +419,14 @@ const cumulativeChartOptions = {
   },
 };
 
-watch(isReady, ready => {
+watch(is_ready, ready => {
   if (ready) {
     loadStats();
   }
 });
 
 onMounted(() => {
-  if (isReady.value) {
+  if (is_ready.value) {
     loadStats();
   }
 });
@@ -427,7 +436,13 @@ onMounted(() => {
   <div>
     <div class="d-flex align-center mb-4">
       <h2 class="text-headline-small">投資績效</h2>
-      <v-btn class="ml-auto" variant="tonal" size="small" :loading="isLoading" @click="handleRefresh">
+      <v-btn
+        class="ml-auto"
+        variant="tonal"
+        size="small"
+        :loading="is_loading"
+        @click="handleRefresh"
+      >
         重新計算
       </v-btn>
     </div>
@@ -440,43 +455,43 @@ onMounted(() => {
               <div class="text-body-small text-grey">已實現損益</div>
               <div
                 class="text-body-large font-weight-bold"
-                :class="stats.realizedGain >= 0 ? 'text-success' : 'text-error'"
+                :class="stats.realized_gain >= 0 ? 'text-success' : 'text-error'"
               >
-                {{ stats.realizedGain >= 0 ? '+' : '' }}{{ stats.realizedGain.toLocaleString() }}
+                {{ stats.realized_gain >= 0 ? '+' : '' }}{{ stats.realized_gain.toLocaleString() }}
               </div>
             </template>
             <template v-else-if="i === 2">
               <div class="text-body-small text-grey">未實現損益</div>
               <div
                 class="text-body-large font-weight-bold"
-                :class="stats.unrealizedGain >= 0 ? 'text-success' : 'text-error'"
+                :class="stats.unrealized_gain >= 0 ? 'text-success' : 'text-error'"
               >
-                {{ stats.unrealizedGain >= 0 ? '+' : ''
-                }}{{ stats.unrealizedGain.toLocaleString() }}
+                {{ stats.unrealized_gain >= 0 ? '+' : ''
+                }}{{ stats.unrealized_gain.toLocaleString() }}
               </div>
             </template>
             <template v-else-if="i === 3">
               <div class="text-body-small text-grey">股利收入</div>
               <div class="text-body-large font-weight-bold text-success">
-                {{ stats.totalDividend.toLocaleString() }}
+                {{ stats.total_dividend.toLocaleString() }}
               </div>
             </template>
             <template v-else-if="i === 4">
               <div class="text-body-small text-grey">總損益</div>
               <div
                 class="text-body-large font-weight-bold"
-                :class="stats.totalReturn >= 0 ? 'text-success' : 'text-error'"
+                :class="stats.total_return >= 0 ? 'text-success' : 'text-error'"
               >
-                {{ stats.totalReturn >= 0 ? '+' : '' }}{{ stats.totalReturn.toLocaleString() }}
+                {{ stats.total_return >= 0 ? '+' : '' }}{{ stats.total_return.toLocaleString() }}
               </div>
             </template>
             <template v-else-if="i === 5">
               <div class="text-body-small text-grey">交易次數</div>
               <div class="text-body-large font-weight-bold">
-                {{ stats.buyCount + stats.sellCount }}
+                {{ stats.buy_count + stats.sell_count }}
               </div>
               <div class="text-body-small text-grey">
-                {{ stats.buyCount }} 買 / {{ stats.sellCount }} 賣
+                {{ stats.buy_count }} 買 / {{ stats.sell_count }} 賣
               </div>
             </template>
           </v-card-text>
@@ -562,10 +577,10 @@ onMounted(() => {
           <v-card-text>
             <div style="height: 250px">
               <Chart
-                v-if="annualPerformance.length > 0"
+                v-if="annual_performance.length > 0"
                 type="bar"
-                :data="performanceChartData"
-                :options="performanceChartOptions"
+                :data="performance_chart_data"
+                :options="performance_chart_options"
               />
               <div v-else class="d-flex align-center justify-center h-100 text-grey">尚無資料</div>
             </div>
@@ -591,10 +606,10 @@ onMounted(() => {
           <v-card-text>
             <div style="height: 250px">
               <Chart
-                v-if="annualPerformance.length > 0"
+                v-if="annual_performance.length > 0"
                 type="line"
-                :data="cumulativeChartData"
-                :options="cumulativeChartOptions"
+                :data="cumulative_chart_data"
+                :options="cumulative_chart_options"
               />
               <div v-else class="d-flex align-center justify-center h-100 text-grey">尚無資料</div>
             </div>

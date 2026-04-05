@@ -2,7 +2,7 @@ export function exportToCsv(data: Record<string, unknown>[], filename: string): 
   if (data.length === 0) return;
 
   const headers = Object.keys(data[0]);
-  const csvRows = [headers.join(',')];
+  const csv_rows = [headers.join(',')];
 
   for (const row of data) {
     const values = headers.map(header => {
@@ -14,11 +14,11 @@ export function exportToCsv(data: Record<string, unknown>[], filename: string): 
       }
       return str;
     });
-    csvRows.push(values.join(','));
+    csv_rows.push(values.join(','));
   }
 
-  const csvContent = csvRows.join('\n');
-  const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+  const csv_content = csv_rows.join('\n');
+  const blob = new Blob(['\ufeff' + csv_content], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -51,24 +51,24 @@ export function parseCsv(content: string): Record<string, string>[] {
 function parseCsvLine(line: string): string[] {
   const result: string[] = [];
   let current = '';
-  let inQuotes = false;
+  let in_quotes = false;
 
   for (let i = 0; i < line.length; i++) {
     const char = line[i];
-    const nextChar = line[i + 1];
+    const next_char = line[i + 1];
 
-    if (inQuotes) {
-      if (char === '"' && nextChar === '"') {
+    if (in_quotes) {
+      if (char === '"' && next_char === '"') {
         current += '"';
         i++;
       } else if (char === '"') {
-        inQuotes = false;
+        in_quotes = false;
       } else {
         current += char;
       }
     } else {
       if (char === '"') {
-        inQuotes = true;
+        in_quotes = true;
       } else if (char === ',') {
         result.push(current.trim());
         current = '';

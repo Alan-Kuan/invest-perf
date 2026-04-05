@@ -1,4 +1,4 @@
-import initSqlJs, { SqlJsStatic, Database } from 'sql.js/dist/sql-wasm.js';
+import initSqlJs, { Database } from 'sql.js/dist/sql-wasm.js';
 
 let db: Database | null = null;
 
@@ -7,17 +7,17 @@ const STORE_NAME = 'invest_perf_data';
 const IDB_NAME = 'invest_perf';
 const IDB_VERSION = 7;
 
-let idbInstance: IDBDatabase | null = null;
+let idb_instance: IDBDatabase | null = null;
 
 function openIndexedDB(): Promise<IDBDatabase> {
-  if (idbInstance) return Promise.resolve(idbInstance);
+  if (idb_instance) return Promise.resolve(idb_instance);
 
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(IDB_NAME, IDB_VERSION);
 
     request.onerror = () => reject(request.error);
     request.onsuccess = () => {
-      idbInstance = request.result;
+      idb_instance = request.result;
       resolve(request.result);
     };
 
@@ -64,16 +64,16 @@ async function clearIndexedDB(): Promise<void> {
 }
 
 export async function initDatabase(): Promise<Database> {
-  const SQL: SqlJsStatic = await initSqlJs({
+  const sql_js = await initSqlJs({
     locateFile: () => '/sql-wasm.wasm',
   });
 
-  const savedData = await loadFromIndexedDB();
+  const saved_data = await loadFromIndexedDB();
 
-  if (savedData && savedData.length > 0) {
-    db = new SQL.Database(new Uint8Array(savedData));
+  if (saved_data && saved_data.length > 0) {
+    db = new sql_js.Database(new Uint8Array(saved_data));
   } else {
-    db = new SQL.Database();
+    db = new sql_js.Database();
   }
 
   createTables();
@@ -84,15 +84,15 @@ export async function initDatabase(): Promise<Database> {
 function createTables(): void {
   if (!db) return;
 
-  const tableExists = db.exec(
+  const table_exists = db.exec(
     "SELECT name FROM sqlite_master WHERE type='table' AND name='annual_performance'",
   );
 
-  if (tableExists.length > 0) {
+  if (table_exists.length > 0) {
     const columns = db.exec('PRAGMA table_info(annual_performance)');
-    const hasOldColumns = columns[0]?.values?.some((col: any) => col[1] === 'realized_gain');
+    const has_old_columns = columns[0]?.values?.some((col: any) => col[1] === 'realized_gain');
 
-    if (hasOldColumns) {
+    if (has_old_columns) {
       db.run('DROP TABLE annual_performance');
     }
   }
@@ -198,7 +198,7 @@ export async function exportDatabase(): Promise<Uint8Array | null> {
 }
 
 export async function importDatabase(uint8Array: Uint8Array): Promise<void> {
-  const SQL: SqlJsStatic = await initSqlJs();
-  db = new SQL.Database(uint8Array);
+  const sql_js = await initSqlJs();
+  db = new sql_js.Database(uint8Array);
   await saveDatabase();
 }

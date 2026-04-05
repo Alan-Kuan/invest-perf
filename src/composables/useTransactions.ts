@@ -1,4 +1,4 @@
-import { ref, computed } from 'vue';
+import { ref } from 'vue';
 
 import { generateId } from '../db';
 import { useDatabase } from './useDatabase';
@@ -32,18 +32,18 @@ export interface TransactionInput {
 export interface TransactionFilters {
   ticker?: string;
   type?: string;
-  startDate?: string;
-  endDate?: string;
-  sortOrder?: 'ASC' | 'DESC';
+  start_date?: string;
+  end_date?: string;
+  sort_order?: 'ASC' | 'DESC';
 }
 
 export function useTransactions() {
   const { query, execute } = useDatabase();
   const transactions = ref<Transaction[]>([]);
-  const currentFilters = ref<TransactionFilters>({});
+  const current_filters = ref<TransactionFilters>({});
 
   function loadTransactions(filters: TransactionFilters = {}): Transaction[] {
-    currentFilters.value = filters;
+    current_filters.value = filters;
     let sql = 'SELECT * FROM transactions WHERE 1=1';
     const params: string[] = [];
 
@@ -57,17 +57,17 @@ export function useTransactions() {
       params.push(filters.type);
     }
 
-    if (filters.startDate) {
+    if (filters.start_date) {
       sql += ' AND date >= ?';
-      params.push(filters.startDate);
+      params.push(filters.start_date);
     }
 
-    if (filters.endDate) {
+    if (filters.end_date) {
       sql += ' AND date <= ?';
-      params.push(filters.endDate);
+      params.push(filters.end_date);
     }
 
-    const order = filters.sortOrder === 'ASC' ? 'ASC' : 'DESC';
+    const order = filters.sort_order === 'ASC' ? 'ASC' : 'DESC';
     sql += ` ORDER BY date ${order}, created_at ${order}`;
 
     transactions.value = query(sql, params) as unknown as Transaction[];
@@ -80,11 +80,11 @@ export function useTransactions() {
     const fee = data.fee || 0;
     const tax = data.tax || 0;
 
-    let netAmount: number;
+    let net_amount: number;
     if (data.type === 'buy') {
-      netAmount = total + fee;
+      net_amount = total + fee;
     } else {
-      netAmount = total - fee - tax;
+      net_amount = total - fee - tax;
     }
 
     execute(
@@ -101,11 +101,11 @@ export function useTransactions() {
         total,
         fee,
         tax,
-        netAmount,
+        net_amount,
       ],
     );
 
-    loadTransactions(currentFilters.value);
+    loadTransactions(current_filters.value);
     return id;
   }
 
@@ -114,11 +114,11 @@ export function useTransactions() {
     const fee = data.fee || 0;
     const tax = data.tax || 0;
 
-    let netAmount: number;
+    let net_amount: number;
     if (data.type === 'buy') {
-      netAmount = total + fee;
+      net_amount = total + fee;
     } else {
-      netAmount = total - fee - tax;
+      net_amount = total - fee - tax;
     }
 
     execute(
@@ -133,39 +133,18 @@ export function useTransactions() {
         total,
         fee,
         tax,
-        netAmount,
+        net_amount,
         id,
       ],
     );
 
-    loadTransactions(currentFilters.value);
+    loadTransactions(current_filters.value);
   }
 
   function deleteTransaction(id: string): void {
     execute('DELETE FROM transactions WHERE id = ?', [id]);
-    loadTransactions(currentFilters.value);
+    loadTransactions(current_filters.value);
   }
-
-  const getStats = computed(() => {
-    const stats = {
-      totalBuy: 0,
-      totalSell: 0,
-      buyCount: 0,
-      sellCount: 0,
-    };
-
-    transactions.value.forEach(t => {
-      if (t.type === 'buy') {
-        stats.totalBuy += t.net_amount;
-        stats.buyCount++;
-      } else {
-        stats.totalSell += t.net_amount;
-        stats.sellCount++;
-      }
-    });
-
-    return stats;
-  });
 
   return {
     transactions,
@@ -173,6 +152,5 @@ export function useTransactions() {
     addTransaction,
     updateTransaction,
     deleteTransaction,
-    getStats,
   };
 }

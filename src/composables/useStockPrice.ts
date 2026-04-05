@@ -1,8 +1,8 @@
 import { useDatabase } from './useDatabase';
 
-const historicalPriceCache = new Map<string, Map<string, number | string>>();
+const historical_price_cache = new Map<string, Map<string, number | string>>();
 
-let lastRequestTime = 0;
+let last_request_time = 0;
 const MIN_REQUEST_INTERVAL = 1700;
 
 function delay(ms: number): Promise<void> {
@@ -38,10 +38,10 @@ export function useStockPrice() {
       const url = `/api/mis/stock/api/getStockInfo.jsp?ex_ch=${codes}&json=1&delay=0`;
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      const timeout_id = setTimeout(() => controller.abort(), 10000);
 
       const response = await fetch(url, { signal: controller.signal });
-      clearTimeout(timeoutId);
+      clearTimeout(timeout_id);
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
@@ -72,31 +72,31 @@ export function useStockPrice() {
   }
 
   async function fetchHistoricalPrice(ticker: string, date: string): Promise<number | null> {
-    const cached = historicalPriceCache.get(ticker)?.get(date);
+    const cached = historical_price_cache.get(ticker)?.get(date);
 
     if (cached !== undefined && typeof cached === 'number') {
       return cached;
     }
 
-    const dbPrice = loadFromDb(ticker, date);
-    if (dbPrice !== null) {
-      if (!historicalPriceCache.has(ticker)) {
-        historicalPriceCache.set(ticker, new Map());
+    const db_price = loadFromDb(ticker, date);
+    if (db_price !== null) {
+      if (!historical_price_cache.has(ticker)) {
+        historical_price_cache.set(ticker, new Map());
       }
-      historicalPriceCache.get(ticker)!.set(date, dbPrice);
-      return dbPrice;
+      historical_price_cache.get(ticker)!.set(date, db_price);
+      return db_price;
     }
 
     const now = Date.now();
-    if (now - lastRequestTime < MIN_REQUEST_INTERVAL) {
-      await delay(MIN_REQUEST_INTERVAL - (now - lastRequestTime));
+    if (now - last_request_time < MIN_REQUEST_INTERVAL) {
+      await delay(MIN_REQUEST_INTERVAL - (now - last_request_time));
     }
-    lastRequestTime = Date.now();
+    last_request_time = Date.now();
 
     try {
-      const dateStr = date.replace(/-/g, '');
+      const date_str = date.replace(/-/g, '');
       const response = await fetch(
-        `https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=${dateStr}&stockNo=${ticker}`,
+        `https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=${date_str}&stockNo=${ticker}`,
       );
 
       if (!response.ok || response.status !== 200) {
@@ -107,24 +107,24 @@ export function useStockPrice() {
       const data = await response.json();
 
       if (data.stat === 'OK' && data.data && data.data.length > 0) {
-        const rocDate = `${parseInt(date.substring(0, 4)) - 1911}/${date.substring(5, 7)}/${date.substring(8, 10)}`;
-        let targetRow: string[] | undefined;
+        const roc_date = `${parseInt(date.substring(0, 4)) - 1911}/${date.substring(5, 7)}/${date.substring(8, 10)}`;
+        let target_row: string[] | undefined;
 
         for (const row of data.data) {
-          if (row[0] <= rocDate) {
-            if (!targetRow || row[0] > targetRow[0]) {
-              targetRow = row;
+          if (row[0] <= roc_date) {
+            if (!target_row || row[0] > target_row[0]) {
+              target_row = row;
             }
           }
         }
 
-        if (targetRow) {
-          const price = parseFloat(targetRow[6].replace(/,/g, ''));
+        if (target_row) {
+          const price = parseFloat(target_row[6].replace(/,/g, ''));
           if (!isNaN(price) && price > 0) {
-            if (!historicalPriceCache.has(ticker)) {
-              historicalPriceCache.set(ticker, new Map());
+            if (!historical_price_cache.has(ticker)) {
+              historical_price_cache.set(ticker, new Map());
             }
-            historicalPriceCache.get(ticker)!.set(date, price);
+            historical_price_cache.get(ticker)!.set(date, price);
             await saveToDb(ticker, date, price);
             return price;
           }

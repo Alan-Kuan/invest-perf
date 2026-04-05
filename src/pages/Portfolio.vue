@@ -15,45 +15,45 @@ interface DistributionData {
   value: number;
 }
 
-const { isReady } = useDatabase();
+const { is_ready } = useDatabase();
 const { updatePrice, getPortfolioSummary } = usePortfolio();
 const { fetchPricesBatch } = useStockPrice();
 
 interface PortfolioSummary {
   holdings: Holding[];
-  totalCost: number;
-  totalValue: number;
-  totalUnrealized: number;
+  total_cost: number;
+  total_value: number;
+  total_unrealized: number;
 }
 
 const summary = ref<PortfolioSummary>({
   holdings: [],
-  totalCost: 0,
-  totalValue: 0,
-  totalUnrealized: 0,
+  total_cost: 0,
+  total_value: 0,
+  total_unrealized: 0,
 });
 
-const isLoadingPrices = ref(false);
-const lastUpdate = ref<string | null>(null);
-const tickerDistribution = ref<DistributionData[]>([]);
-let priceUpdateInterval: ReturnType<typeof setInterval> | null = null;
+const is_loading_prices = ref(false);
+const last_update = ref<string | null>(null);
+const ticker_distribution = ref<DistributionData[]>([]);
+let price_update_interval: ReturnType<typeof setInterval> | null = null;
 
 function isMarketHours(): boolean {
   const now = new Date();
   const day = now.getDay();
   const hours = now.getHours();
   const minutes = now.getMinutes();
-  const timeInMinutes = hours * 60 + minutes;
+  const time_in_minutes = hours * 60 + minutes;
 
   if (day === 0 || day === 6) return false;
-  if (timeInMinutes < 9 * 60 || timeInMinutes > 13 * 60 + 30) return false;
+  if (time_in_minutes < 9 * 60 || time_in_minutes > 13 * 60 + 30) return false;
   return true;
 }
 
 function startPriceUpdateTimer() {
-  if (priceUpdateInterval) return;
+  if (price_update_interval) return;
 
-  priceUpdateInterval = setInterval(
+  price_update_interval = setInterval(
     () => {
       if (isMarketHours() && summary.value.holdings.length > 0) {
         fetchAllPrices();
@@ -64,9 +64,9 @@ function startPriceUpdateTimer() {
 }
 
 function stopPriceUpdateTimer() {
-  if (priceUpdateInterval) {
-    clearInterval(priceUpdateInterval);
-    priceUpdateInterval = null;
+  if (price_update_interval) {
+    clearInterval(price_update_interval);
+    price_update_interval = null;
   }
 }
 
@@ -74,35 +74,35 @@ function loadData() {
   const data = getPortfolioSummary();
   const holdings = data.holdings.filter(h => h.shares > 0);
 
-  const totalCost = holdings.reduce((sum, h) => sum + h.total_cost, 0);
-  const totalValue = holdings.reduce(
-    (sum, h) => sum + (h.currentPrice || h.avg_cost) * h.shares,
+  const total_cost = holdings.reduce((sum, h) => sum + h.total_cost, 0);
+  const total_value = holdings.reduce(
+    (sum, h) => sum + (h.current_price || h.avg_cost) * h.shares,
     0,
   );
-  const totalUnrealized = holdings.reduce((sum, h) => sum + (h.unrealizedGain || 0), 0);
+  const total_unrealized = holdings.reduce((sum, h) => sum + (h.unrealized_gain || 0), 0);
 
   summary.value = {
     holdings,
-    totalCost,
-    totalValue,
-    totalUnrealized,
+    total_cost: total_cost,
+    total_value: total_value,
+    total_unrealized: total_unrealized,
   };
   loadTickerDistribution();
 }
 
 function loadTickerDistribution() {
-  tickerDistribution.value = summary.value.holdings.map(h => ({
+  ticker_distribution.value = summary.value.holdings.map(h => ({
     ticker: h.ticker,
     name: h.name,
-    value: (h.currentPrice || h.avg_cost) * h.shares,
+    value: (h.current_price || h.avg_cost) * h.shares,
   }));
 }
 
-const distributionChartData = computed(() => ({
-  labels: tickerDistribution.value.map(t => t.name),
+const distribution_chart_data = computed(() => ({
+  labels: ticker_distribution.value.map(t => t.name),
   datasets: [
     {
-      data: tickerDistribution.value.map(t => t.value),
+      data: ticker_distribution.value.map(t => t.value),
       backgroundColor: [
         '#00d9ff',
         '#ff6b6b',
@@ -117,7 +117,7 @@ const distributionChartData = computed(() => ({
   ],
 }));
 
-const distributionChartOptions = {
+const distribution_chart_options = {
   responsive: true,
   maintainAspectRatio: false,
   plugins: {
@@ -127,7 +127,7 @@ const distributionChartOptions = {
     tooltip: {
       callbacks: {
         label: (ctx: any) => {
-          const item = tickerDistribution.value[ctx.dataIndex];
+          const item = ticker_distribution.value[ctx.dataIndex];
           return `${item.name} (${item.ticker}): ${item.value.toLocaleString()}`;
         },
       },
@@ -135,10 +135,10 @@ const distributionChartOptions = {
   },
 };
 
-const fetchAllPrices = async () => {
+async function fetchAllPrices() {
   if (summary.value.holdings.length === 0) return;
 
-  isLoadingPrices.value = true;
+  is_loading_prices.value = true;
 
   try {
     const tickers = summary.value.holdings.map(h => h.ticker);
@@ -149,20 +149,20 @@ const fetchAllPrices = async () => {
     }
 
     loadData();
-    lastUpdate.value = new Date().toLocaleTimeString();
+    last_update.value = new Date().toLocaleTimeString();
   } finally {
-    isLoadingPrices.value = false;
+    is_loading_prices.value = false;
   }
-};
+}
 
-watch(isReady, ready => {
+watch(is_ready, ready => {
   if (ready) {
     loadData();
   }
 });
 
 onMounted(() => {
-  if (isReady.value) {
+  if (is_ready.value) {
     loadData();
     if (isMarketHours()) {
       fetchAllPrices();
@@ -181,11 +181,11 @@ onUnmounted(() => {
     <div class="d-flex justify-space-between align-center mb-4">
       <h2 class="text-headline-small">投資組合</h2>
       <div class="d-flex align-center">
-        <span v-if="lastUpdate" class="text-grey mr-4">更新時間: {{ lastUpdate }}</span>
+        <span v-if="last_update" class="text-grey mr-4">更新時間: {{ last_update }}</span>
         <v-btn
           variant="tonal"
           size="small"
-          :loading="isLoadingPrices"
+          :loading="is_loading_prices"
           :disabled="summary.holdings.length === 0"
           @click="fetchAllPrices"
         >
@@ -200,7 +200,7 @@ onUnmounted(() => {
           <v-card-text>
             <div class="text-body-small text-grey">總成本</div>
             <div class="text-body-large font-weight-bold">
-              {{ summary.totalCost.toLocaleString() }}
+              {{ summary.total_cost.toLocaleString() }}
             </div>
           </v-card-text>
         </v-card>
@@ -210,7 +210,7 @@ onUnmounted(() => {
           <v-card-text>
             <div class="text-body-small text-grey">總市值</div>
             <div class="text-body-large font-weight-bold">
-              {{ summary.totalValue.toLocaleString() }}
+              {{ summary.total_value.toLocaleString() }}
             </div>
           </v-card-text>
         </v-card>
@@ -221,10 +221,10 @@ onUnmounted(() => {
             <div class="text-body-small text-grey">未實現損益</div>
             <div
               class="text-body-large font-weight-bold"
-              :class="summary.totalUnrealized >= 0 ? 'text-success' : 'text-error'"
+              :class="summary.total_unrealized >= 0 ? 'text-success' : 'text-error'"
             >
-              {{ summary.totalUnrealized >= 0 ? '+' : ''
-              }}{{ summary.totalUnrealized.toLocaleString() }}
+              {{ summary.total_unrealized >= 0 ? '+' : ''
+              }}{{ summary.total_unrealized.toLocaleString() }}
             </div>
           </v-card-text>
         </v-card>
@@ -236,9 +236,9 @@ onUnmounted(() => {
       <v-card-text>
         <div style="height: 300px">
           <Doughnut
-            v-if="tickerDistribution.length > 0"
-            :data="distributionChartData"
-            :options="distributionChartOptions"
+            v-if="ticker_distribution.length > 0"
+            :data="distribution_chart_data"
+            :options="distribution_chart_options"
           />
           <div v-else class="d-flex align-center justify-center h-100 text-grey">尚無資料</div>
         </div>
@@ -269,23 +269,23 @@ onUnmounted(() => {
               <td class="text-right">{{ h.shares.toLocaleString() }}</td>
               <td class="text-right">{{ h.avg_cost?.toLocaleString() }}</td>
               <td class="text-right">{{ h.total_cost?.toLocaleString() }}</td>
-              <td class="text-right">{{ h.currentPrice?.toLocaleString() || '-' }}</td>
+              <td class="text-right">{{ h.current_price?.toLocaleString() || '-' }}</td>
               <td class="text-right">
-                {{ ((h.currentPrice || h.avg_cost) * h.shares).toLocaleString() }}
+                {{ ((h.current_price || h.avg_cost) * h.shares).toLocaleString() }}
               </td>
               <td
                 class="text-right"
-                :class="(h.unrealizedGain || 0) >= 0 ? 'text-success' : 'text-error'"
+                :class="(h.unrealized_gain || 0) >= 0 ? 'text-success' : 'text-error'"
               >
-                {{ (h.unrealizedGain || 0) >= 0 ? '+' : ''
-                }}{{ (h.unrealizedGain || 0).toLocaleString() }}
+                {{ (h.unrealized_gain || 0) >= 0 ? '+' : ''
+                }}{{ (h.unrealized_gain || 0).toLocaleString() }}
               </td>
               <td
                 class="text-right"
-                :class="(h.unrealizedGainPercent || 0) >= 0 ? 'text-success' : 'text-error'"
+                :class="(h.unrealized_gain_percent || 0) >= 0 ? 'text-success' : 'text-error'"
               >
-                {{ (h.unrealizedGainPercent || 0) >= 0 ? '+' : ''
-                }}{{ (h.unrealizedGainPercent || 0).toFixed(2) }}%
+                {{ (h.unrealized_gain_percent || 0) >= 0 ? '+' : ''
+                }}{{ (h.unrealized_gain_percent || 0).toFixed(2) }}%
               </td>
             </tr>
             <tr v-if="summary.holdings.length === 0">

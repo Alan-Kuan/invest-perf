@@ -6,35 +6,35 @@ import { useDatabase } from './composables/useDatabase';
 
 const { init, exportData, importData, clear } = useDatabase();
 
-const fileInput = ref<HTMLInputElement | null>(null);
-const isImporting = ref(false);
+const file_input = ref<HTMLInputElement | null>(null);
+const is_importing = ref(false);
 
 const snackbar = ref(false);
-const snackbarText = ref('');
-const snackbarColor = ref('success');
+const snackbar_text = ref('');
+const snackbar_color = ref('success');
 
-const confirmDialog = ref(false);
-const confirmMessage = ref('');
-const confirmResolve = ref<((value: boolean) => void) | null>(null);
+const confirm_dialog = ref(false);
+const confirm_message = ref('');
+const confirm_resolve = ref<((value: boolean) => void) | null>(null);
 
 function showSnackbar(text: string, color: string = 'success') {
-  snackbarText.value = text;
-  snackbarColor.value = color;
+  snackbar_text.value = text;
+  snackbar_color.value = color;
   snackbar.value = true;
 }
 
 function showConfirm(message: string): Promise<boolean> {
-  confirmMessage.value = message;
-  confirmDialog.value = true;
+  confirm_message.value = message;
+  confirm_dialog.value = true;
   return new Promise(resolve => {
-    confirmResolve.value = resolve;
+    confirm_resolve.value = resolve;
   });
 }
 
 function handleConfirm(result: boolean) {
-  confirmDialog.value = false;
-  confirmResolve.value?.(result);
-  confirmResolve.value = null;
+  confirm_dialog.value = false;
+  confirm_resolve.value?.(result);
+  confirm_resolve.value = null;
 }
 
 function handleExport() {
@@ -42,7 +42,7 @@ function handleExport() {
 }
 
 function handleImportClick() {
-  fileInput.value?.click();
+  file_input.value?.click();
 }
 
 provide('showSnackbar', showSnackbar);
@@ -62,13 +62,13 @@ async function handleFileChange(event: Event) {
     return;
   }
 
-  isImporting.value = true;
+  is_importing.value = true;
   try {
     await importData(file);
     window.location.reload();
   } catch (e) {
     showSnackbar('匯入失敗: ' + (e as Error).message, 'error');
-    isImporting.value = false;
+    is_importing.value = false;
   }
   target.value = '';
 }
@@ -142,12 +142,12 @@ async function handleClear() {
             <v-list-item
               @click="handleImportClick"
               prepend-icon="mdi-upload"
-              :disabled="isImporting"
+              :disabled="is_importing"
               density="compact"
               class="mb-1 rounded-lg px-2"
             >
               <template #title>
-                {{ isImporting ? '匯入中...' : '匯入資料庫' }}
+                {{ is_importing ? '匯入中...' : '匯入資料庫' }}
               </template>
             </v-list-item>
             <v-list-item
@@ -158,7 +158,7 @@ async function handleClear() {
               density="compact"
             />
             <input
-              ref="fileInput"
+              ref="file_input"
               type="file"
               accept=".db"
               style="display: none"
@@ -175,14 +175,14 @@ async function handleClear() {
       </v-container>
     </v-main>
 
-    <v-snackbar v-model="snackbar" location="bottom right" :color="snackbarColor" :timeout="3000">
-      {{ snackbarText }}
+    <v-snackbar v-model="snackbar" location="bottom right" :color="snackbar_color" :timeout="3000">
+      {{ snackbar_text }}
     </v-snackbar>
 
-    <v-dialog v-model="confirmDialog" max-width="400">
+    <v-dialog v-model="confirm_dialog" max-width="400">
       <v-card>
         <v-card-title>確認</v-card-title>
-        <v-card-text>{{ confirmMessage }}</v-card-text>
+        <v-card-text>{{ confirm_message }}</v-card-text>
         <v-card-actions>
           <v-spacer />
           <v-btn variant="text" @click="handleConfirm(false)">取消</v-btn>

@@ -6,15 +6,15 @@ import { useDatabase } from '../composables/useDatabase';
 import { useDividends, type DividendInput } from '../composables/useDividends';
 import { exportToCsv, parseCsv } from '../utils/csv';
 
-const { isReady } = useDatabase();
+const { is_ready } = useDatabase();
 const { dividends, loadDividends, addDividend, deleteDividend, getAvailableYears } = useDividends();
 const showSnackbar = inject<(text: string, color?: string) => void>('showSnackbar');
 const showConfirm = inject<(message: string) => Promise<boolean>>('showConfirm');
 
-const fileInput = ref<HTMLInputElement | null>(null);
-const importLoading = ref(false);
+const file_input = ref<HTMLInputElement | null>(null);
+const import_loading = ref(false);
 
-const exportCsv = () => {
+function exportCsv() {
   const data = dividends.value.map(d => ({
     發放日: d.pay_date,
     代號: d.ticker,
@@ -27,39 +27,39 @@ const exportCsv = () => {
   }));
   const date = new Date().toISOString().split('T')[0];
   exportToCsv(data, `dividends-${date}.csv`);
-};
+}
 
-const triggerImport = () => {
-  fileInput.value?.click();
-};
+function triggerImport() {
+  file_input.value?.click();
+}
 
-const handleFileImport = async (event: Event) => {
+async function handleFileImport(event: Event) {
   const target = event.target as HTMLInputElement;
   const file = target.files?.[0];
   if (!file) return;
 
-  importLoading.value = true;
+  import_loading.value = true;
   try {
     const text = await file.text();
     const rows = parseCsv(text);
 
     let imported = 0;
     for (const row of rows) {
-      const payDate = row['發放日'] || row['pay_date'] || row['發放日期'];
+      const pay_date = row['發放日'] || row['pay_date'] || row['發放日期'];
       const ticker = row['代號'] || row['ticker'];
       const category = row['類別'] || row['category'];
       const shares = parseInt(row['基準日持有股數'] || row['shares']);
-      const perShare = parseFloat(row['每股股利'] || row['per_share']);
+      const per_share = parseFloat(row['每股股利'] || row['per_share']);
       const fee = parseFloat(row['匯費'] || row['fee'] || '0');
 
-      if (payDate && ticker && shares && perShare) {
+      if (pay_date && ticker && shares && per_share) {
         const input: DividendInput = {
-          payDate: normalizeDate(payDate),
+          pay_date: normalizeDate(pay_date),
           ticker,
           name: row['名稱'] || row['name'] || '',
           category: category === '現金股利' || category === 'cash' ? 'cash' : 'stock',
           shares,
-          perShare,
+          per_share,
           fee,
         };
         addDividend(input);
@@ -73,14 +73,16 @@ const handleFileImport = async (event: Event) => {
     console.error('Import error:', e);
     showSnackbar?.('匯入失敗', 'error');
   } finally {
-    importLoading.value = false;
+    import_loading.value = false;
     target.value = '';
   }
-};
+}
 
-const formatDate = (date: string) => (date ? date.replace(/-/g, '/') : '');
+function formatDate(date: string) {
+  return date ? date.replace(/-/g, '/') : '';
+}
 
-const normalizeDate = (date: string): string => {
+function normalizeDate(date: string): string {
   if (!date) return '';
   const d = new Date(date);
   if (isNaN(d.getTime())) return date;
@@ -88,56 +90,56 @@ const normalizeDate = (date: string): string => {
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
-};
+}
 
-const formatDateToString = (date: Date | string): string => {
+function formatDateToString(date: Date | string): string {
   if (!date) return '';
   if (typeof date === 'string') return date;
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
-};
+}
 
 interface DividendForm {
-  payDate: string;
-  payDatePicker: string;
+  pay_date: string;
+  pay_date_picker: string;
   ticker: string;
   name: string;
   category: 'cash' | 'stock';
   shares: number | null;
-  perShare: number | null;
+  per_share: number | null;
   fee: number | null;
 }
 
 const form = ref<DividendForm>({
-  payDate: formatDateToString(new Date()),
-  payDatePicker: formatDateToString(new Date()),
+  pay_date: formatDateToString(new Date()),
+  pay_date_picker: formatDateToString(new Date()),
   ticker: '',
   name: '',
   category: 'cash',
   shares: null,
-  perShare: null,
+  per_share: null,
   fee: null,
 });
 
-const dateMenu = ref(false);
+const date_menu = ref(false);
 
-const updatePayDate = (val: Date | string) => {
+function updatePayDate(val: Date | string) {
   if (!val) return;
-  const dateStr = formatDateToString(val);
-  if (dateStr && dateStr.length === 10) {
-    form.value.payDate = dateStr;
-    form.value.payDatePicker = dateStr;
+  const date_str = formatDateToString(val);
+  if (date_str && date_str.length === 10) {
+    form.value.pay_date = date_str;
+    form.value.pay_date_picker = date_str;
   } else {
-    form.value.payDatePicker = dateStr;
+    form.value.pay_date_picker = date_str;
   }
-};
+}
 
-const confirmDate = () => {
-  updatePayDate(form.value.payDatePicker);
-  dateMenu.value = false;
-};
+function confirmDate() {
+  updatePayDate(form.value.pay_date_picker);
+  date_menu.value = false;
+}
 
 interface DividendFilters {
   ticker: string;
@@ -153,82 +155,82 @@ const filters = ref<DividendFilters>({
   year: null,
 });
 
-const computedAmount = computed(() => {
+const computed_amount = computed(() => {
   const shares = form.value.shares || 0;
-  const perShare = form.value.perShare || 0;
+  const per_share = form.value.per_share || 0;
   const fee = form.value.fee || 0;
-  return shares * perShare - fee;
+  return shares * per_share - fee;
 });
 
-const submitForm = () => {
-  if (!form.value.payDate || !form.value.ticker || !form.value.shares || !form.value.perShare) {
+function submitForm() {
+  if (!form.value.pay_date || !form.value.ticker || !form.value.shares || !form.value.per_share) {
     showSnackbar?.('請填寫必填欄位', 'warning');
     return;
   }
 
   addDividend({
-    payDate: form.value.payDate,
+    pay_date: form.value.pay_date,
     ticker: form.value.ticker,
     name: form.value.name,
     category: form.value.category,
     shares: form.value.shares,
-    perShare: form.value.perShare,
+    per_share: form.value.per_share,
     fee: form.value.fee || 0,
   });
 
   form.value = {
-    payDate: formatDateToString(new Date()),
-    payDatePicker: formatDateToString(new Date()),
+    pay_date: formatDateToString(new Date()),
+    pay_date_picker: formatDateToString(new Date()),
     ticker: '',
     name: '',
     category: 'cash',
     shares: null,
-    perShare: null,
+    per_share: null,
     fee: null,
   };
 
   loadDividends(filters.value);
-};
+}
 
-const applyFilters = () => {
+function applyFilters() {
   loadDividends(filters.value);
-};
+}
 
-const clearFilters = () => {
+function clearFilters() {
   filters.value = { ticker: '', name: '', category: '', year: null };
   loadDividends();
-};
+}
 
-const handleDelete = async (id: string) => {
+async function handleDelete(id: string) {
   if (await showConfirm?.('確定要刪除這筆紀錄嗎？')) {
     deleteDividend(id);
     loadDividends(filters.value);
   }
-};
+}
 
-const totalDividend = computed(() => {
+const total_dividend = computed(() => {
   return dividends.value.reduce((sum, d) => sum + d.amount, 0);
 });
 
-const totalCash = computed(() => {
+const total_cash = computed(() => {
   return dividends.value.filter(d => d.category === 'cash').reduce((sum, d) => sum + d.amount, 0);
 });
 
-const totalStock = computed(() => {
+const total_stock = computed(() => {
   return dividends.value
     .filter(d => d.category === 'stock')
     .reduce((sum, d) => sum + d.shares * d.per_share, 0);
 });
 
-const availableYears = ref<string[]>([]);
+const available_years = ref<string[]>([]);
 
 const loadAvailableYears = () => {
-  if (isReady.value) {
-    availableYears.value = getAvailableYears();
+  if (is_ready.value) {
+    available_years.value = getAvailableYears();
   }
 };
 
-watch(isReady, ready => {
+watch(is_ready, ready => {
   if (ready) {
     loadDividends();
     loadAvailableYears();
@@ -236,7 +238,7 @@ watch(isReady, ready => {
 });
 
 onMounted(() => {
-  if (isReady.value) {
+  if (is_ready.value) {
     loadDividends();
     loadAvailableYears();
   }
@@ -253,18 +255,11 @@ onMounted(() => {
         <v-form @submit.prevent="submitForm">
           <v-row>
             <v-col cols="12" sm="6" md="3">
-              <v-menu v-model="dateMenu" :close-on-content-click="false" :close-on-esc="false">
+              <v-menu v-model="date_menu" :close-on-content-click="false" :close-on-esc="false">
                 <template #activator="{ props }">
-                  <v-text-field
-                    v-model="form.payDate"
-                    label="發放日期"
-                    variant="outlined"
-                    density="compact"
-                    readonly
-                    v-bind="props"
-                  />
+                  <v-text-field v-model="form.pay_date" />
                 </template>
-                <v-date-picker v-model="form.payDatePicker" hide-title color="primary">
+                <v-date-picker v-model="form.pay_date_picker" hide-title color="primary">
                   <template #actions>
                     <v-btn text color="primary" @click="confirmDate"> 確認 </v-btn>
                   </template>
@@ -307,7 +302,7 @@ onMounted(() => {
 
             <v-col cols="12" sm="6" md="3">
               <v-text-field
-                v-model="form.perShare"
+                v-model="form.per_share"
                 label="每股股利"
                 type="number"
                 step="0.01"
@@ -330,10 +325,10 @@ onMounted(() => {
               <div class="d-flex align-baseline mr-6">
                 <div class="mr-2 text-grey text-body-large">實發股利</div>
                 <div
-                  :class="computedAmount === 0 ? 'text-grey' : 'text-success'"
+                  :class="computed_amount === 0 ? 'text-grey' : 'text-success'"
                   class="text-body-extra-large font-weight-bold"
                 >
-                  {{ computedAmount === 0 ? '$' : '+$' }}{{ computedAmount.toLocaleString() }}
+                  {{ computed_amount === 0 ? '$' : '+$' }}{{ computed_amount.toLocaleString() }}
                 </div>
               </div>
 
@@ -353,7 +348,7 @@ onMounted(() => {
               <v-card-text>
                 <div class="text-body-small">實發股利總計</div>
                 <div class="text-body-large font-weight-bold text-success">
-                  {{ totalDividend.toLocaleString() }}
+                  {{ total_dividend.toLocaleString() }}
                 </div>
               </v-card-text>
             </v-card>
@@ -362,7 +357,9 @@ onMounted(() => {
             <v-card class="rounded-lg h-full" variant="tonal">
               <v-card-text>
                 <div class="text-body-small">現金股利</div>
-                <div class="text-body-large font-weight-bold">{{ totalCash.toLocaleString() }}</div>
+                <div class="text-body-large font-weight-bold">
+                  {{ total_cash.toLocaleString() }}
+                </div>
               </v-card-text>
             </v-card>
           </v-col>
@@ -371,7 +368,7 @@ onMounted(() => {
               <v-card-text>
                 <div class="text-body-small">股票股利</div>
                 <div class="text-body-large font-weight-bold">
-                  {{ totalStock.toLocaleString() }}
+                  {{ total_stock.toLocaleString() }}
                 </div>
               </v-card-text>
             </v-card>
@@ -409,7 +406,7 @@ onMounted(() => {
           <v-col sm="6" md="2">
             <v-select
               v-model="filters.year"
-              :items="availableYears"
+              :items="available_years"
               label="年度"
               variant="outlined"
               density="compact"
@@ -424,11 +421,11 @@ onMounted(() => {
             <v-btn color="success" variant="outlined" @click="exportCsv" class="mr-2"
               >匯出 CSV</v-btn
             >
-            <v-btn color="info" variant="outlined" @click="triggerImport" :loading="importLoading"
+            <v-btn color="info" variant="outlined" @click="triggerImport" :loading="import_loading"
               >匯入 CSV</v-btn
             >
             <input
-              ref="fileInput"
+              ref="file_input"
               type="file"
               accept=".csv"
               style="display: none"

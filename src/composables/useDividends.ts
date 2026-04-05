@@ -20,28 +20,28 @@ interface DividendFilters {
   ticker?: string;
   category?: string;
   year?: string | null;
-  startDate?: string;
-  endDate?: string;
-  sortOrder?: 'ASC' | 'DESC';
+  start_date?: string;
+  end_date?: string;
+  sort_order?: 'ASC' | 'DESC';
 }
 
 export interface DividendInput {
-  payDate: string;
+  pay_date: string;
   ticker: string;
   name: string;
   category: 'cash' | 'stock';
   shares: number;
-  perShare: number;
+  per_share: number;
   fee?: number;
 }
 
 export function useDividends() {
   const { query, execute } = useDatabase();
   const dividends = ref<Dividend[]>([]);
-  const currentFilters = ref<DividendFilters>({});
+  const current_filters = ref<DividendFilters>({});
 
   function loadDividends(filters: DividendFilters = {}): Dividend[] {
-    currentFilters.value = filters;
+    current_filters.value = filters;
     let sql = 'SELECT * FROM dividends WHERE 1=1';
     const params: string[] = [];
 
@@ -60,17 +60,17 @@ export function useDividends() {
       params.push(filters.year.toString());
     }
 
-    if (filters.startDate) {
+    if (filters.start_date) {
       sql += ' AND pay_date >= ?';
-      params.push(filters.startDate);
+      params.push(filters.start_date);
     }
 
-    if (filters.endDate) {
+    if (filters.end_date) {
       sql += ' AND pay_date <= ?';
-      params.push(filters.endDate);
+      params.push(filters.end_date);
     }
 
-    const order = filters.sortOrder === 'ASC' ? 'ASC' : 'DESC';
+    const order = filters.sort_order === 'ASC' ? 'ASC' : 'DESC';
     sql += ` ORDER BY pay_date ${order}, created_at ${order}`;
 
     dividends.value = query(sql, params) as unknown as Dividend[];
@@ -79,52 +79,52 @@ export function useDividends() {
 
   function addDividend(data: DividendInput): string {
     const id = generateId();
-    const amount = data.shares * data.perShare - (data.fee || 0);
+    const amount = data.shares * data.per_share - (data.fee || 0);
 
     execute(
       `INSERT INTO dividends (id, pay_date, ticker, name, category, shares, per_share, fee, amount)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
-        data.payDate,
+        data.pay_date,
         data.ticker,
         data.name || '',
         data.category,
         data.shares,
-        data.perShare,
+        data.per_share,
         data.fee || 0,
         amount,
       ],
     );
 
-    loadDividends(currentFilters.value);
+    loadDividends(current_filters.value);
     return id;
   }
 
   function updateDividend(id: string, data: DividendInput): void {
-    const amount = data.shares * data.perShare - (data.fee || 0);
+    const amount = data.shares * data.per_share - (data.fee || 0);
 
     execute(
       `UPDATE dividends SET pay_date=?, ticker=?, name=?, category=?, shares=?, per_share=?, fee=?, amount=? WHERE id=?`,
       [
-        data.payDate,
+        data.pay_date,
         data.ticker,
         data.name || '',
         data.category,
         data.shares,
-        data.perShare,
+        data.per_share,
         data.fee || 0,
         amount,
         id,
       ],
     );
 
-    loadDividends(currentFilters.value);
+    loadDividends(current_filters.value);
   }
 
   function deleteDividend(id: string): void {
     execute('DELETE FROM dividends WHERE id = ?', [id]);
-    loadDividends(currentFilters.value);
+    loadDividends(current_filters.value);
   }
 
   function getAvailableYears(): string[] {
@@ -134,15 +134,15 @@ export function useDividends() {
   }
 
   function getDividendsByTicker(ticker: string, year: number): number {
-    const startDate = `${year}-01-01`;
-    const endDate = `${year}-12-31`;
+    const start_date = `${year}-01-01`;
+    const end_date = `${year}-12-31`;
     const sql = `
       SELECT COALESCE(SUM(CASE WHEN category = 'cash' THEN amount ELSE 0 END), 0) +
              COALESCE(SUM(CASE WHEN category = 'stock' THEN shares * per_share ELSE 0 END), 0) as total
       FROM dividends
       WHERE ticker = ? AND pay_date >= ? AND pay_date <= ?
     `;
-    const result = query(sql, [ticker, startDate, endDate]) as { total: number }[];
+    const result = query(sql, [ticker, start_date, end_date]) as { total: number }[];
     return result[0]?.total || 0;
   }
 

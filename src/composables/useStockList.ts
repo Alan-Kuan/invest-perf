@@ -8,60 +8,60 @@ interface Stock {
   name: string;
 }
 
-const stockList = ref<Stock[]>([]);
-const isLoading = ref(false);
+const stock_list = ref<Stock[]>([]);
+const is_loading = ref(false);
 
 export function useStockList() {
-  const loadStockList = async (): Promise<Stock[]> => {
-    if (stockList.value.length > 0) {
-      return stockList.value;
+  async function loadStockList(): Promise<Stock[]> {
+    if (stock_list.value.length > 0) {
+      return stock_list.value;
     }
 
-    if (isLoading.value) {
+    if (is_loading.value) {
       return [];
     }
 
-    isLoading.value = true;
+    is_loading.value = true;
 
     const db = getDatabase();
 
     if (db) {
       const result = db.exec('SELECT ticker, name FROM stocks ORDER BY ticker');
       if (result.length > 0 && result[0].values.length > 0) {
-        stockList.value = result[0].values.map((row: SqlValue[]) => ({
+        stock_list.value = result[0].values.map((row: SqlValue[]) => ({
           ticker: row[0] as string,
           name: row[1] as string,
         }));
-        isLoading.value = false;
-        return stockList.value;
+        is_loading.value = false;
+        return stock_list.value;
       }
     }
 
     try {
-      const [stockResponse, etfResponse] = await Promise.all([
+      const [stock_res, etf_res] = await Promise.all([
         fetch('/api/twse/v1/exchangeReport/BWIBBU_d'),
         fetch('/api/twse/v1/exchangeReport/TWT53U'),
       ]);
 
-      const [stockData, etfData] = await Promise.all([stockResponse.json(), etfResponse.json()]);
+      const [stock_data, etf_data] = await Promise.all([stock_res.json(), etf_res.json()]);
 
-      const stockMap = new Map<string, string>();
+      const stock_map = new Map<string, string>();
 
-      if (Array.isArray(stockData)) {
-        for (const item of stockData) {
-          stockMap.set(item.Code, item.Name);
+      if (Array.isArray(stock_data)) {
+        for (const item of stock_data) {
+          stock_map.set(item.Code, item.Name);
         }
       }
 
-      if (Array.isArray(etfData)) {
-        for (const item of etfData) {
-          if (!stockMap.has(item.Code)) {
-            stockMap.set(item.Code, item.Name);
+      if (Array.isArray(etf_data)) {
+        for (const item of etf_data) {
+          if (!stock_map.has(item.Code)) {
+            stock_map.set(item.Code, item.Name);
           }
         }
       }
 
-      const stocks: Stock[] = Array.from(stockMap.entries()).map(([ticker, name]) => ({
+      const stocks: Stock[] = Array.from(stock_map.entries()).map(([ticker, name]) => ({
         ticker,
         name,
       }));
@@ -76,19 +76,19 @@ export function useStockList() {
         await saveDatabase();
       }
 
-      stockList.value = stocks;
+      stock_list.value = stocks;
     } catch (e) {
       console.error('Failed to fetch stock list:', e);
     }
 
-    isLoading.value = false;
-    return stockList.value;
-  };
+    is_loading.value = false;
+    return stock_list.value;
+  }
 
-  const addStock = async (stock: Stock): Promise<void> => {
+  async function addStock(stock: Stock): Promise<void> {
     if (!stock.ticker) return;
 
-    const exists = stockList.value.find(s => s.ticker === stock.ticker);
+    const exists = stock_list.value.find(s => s.ticker === stock.ticker);
     if (!exists) {
       const db = getDatabase();
       if (db) {
@@ -99,28 +99,28 @@ export function useStockList() {
         await saveDatabase();
       }
 
-      stockList.value.push({ ticker: stock.ticker, name: stock.name || '' });
-      stockList.value.sort((a, b) => a.ticker.localeCompare(b.ticker));
+      stock_list.value.push({ ticker: stock.ticker, name: stock.name || '' });
+      stock_list.value.sort((a, b) => a.ticker.localeCompare(b.ticker));
     }
-  };
+  }
 
   function searchStocks(query: string): Stock[] {
     if (!query || query.length < 1) return [];
 
     const q = query.toUpperCase();
-    const list = stockList.value.length > 0 ? stockList.value : [];
+    const list = stock_list.value.length > 0 ? stock_list.value : [];
 
     const results = list.filter(s => {
-      const tickerMatch = s.ticker.includes(q);
-      const nameMatch = s.name.includes(query) || s.name.toUpperCase().includes(q);
-      return tickerMatch || nameMatch;
+      const ticker_match = s.ticker.includes(q);
+      const name_match = s.name.includes(query) || s.name.toUpperCase().includes(q);
+      return ticker_match || name_match;
     });
 
     results.sort((a, b) => {
-      const aStarts = a.ticker.startsWith(q) || a.name.startsWith(query);
-      const bStarts = b.ticker.startsWith(q) || b.name.startsWith(query);
-      if (aStarts && !bStarts) return -1;
-      if (!aStarts && bStarts) return 1;
+      const a_starts = a.ticker.startsWith(q) || a.name.startsWith(query);
+      const b_starts = b.ticker.startsWith(q) || b.name.startsWith(query);
+      if (a_starts && !b_starts) return -1;
+      if (!a_starts && b_starts) return 1;
       return a.ticker.localeCompare(b.ticker);
     });
 
@@ -128,8 +128,8 @@ export function useStockList() {
   }
 
   return {
-    stockList,
-    isLoading,
+    stock_list,
+    is_loading,
     loadStockList,
     addStock,
     searchStocks,

@@ -8,9 +8,9 @@ export interface Holding {
   shares: number;
   avg_cost: number;
   total_cost: number;
-  currentPrice?: number;
-  unrealizedGain?: number;
-  unrealizedGainPercent?: number;
+  current_price?: number;
+  unrealized_gain?: number;
+  unrealized_gain_percent?: number;
 }
 
 interface PriceData {
@@ -41,9 +41,9 @@ export function usePortfolio() {
 
     holdings.value.forEach(h => {
       if (prices.value[h.ticker]) {
-        h.currentPrice = prices.value[h.ticker];
-        h.unrealizedGain = (h.currentPrice - h.avg_cost) * h.shares;
-        h.unrealizedGainPercent = (h.currentPrice / h.avg_cost - 1) * 100;
+        h.current_price = prices.value[h.ticker];
+        h.unrealized_gain = (h.current_price - h.avg_cost) * h.shares;
+        h.unrealized_gain_percent = (h.current_price / h.avg_cost - 1) * 100;
       }
     });
 
@@ -51,16 +51,16 @@ export function usePortfolio() {
   }
 
   function loadPrices(): PriceData {
-    const priceData = query('SELECT * FROM prices') as { ticker: string; price: number }[];
-    priceData.forEach(p => {
+    const price_data = query('SELECT * FROM prices') as { ticker: string; price: number }[];
+    price_data.forEach(p => {
       prices.value[p.ticker] = p.price;
     });
 
     holdings.value.forEach(h => {
       if (prices.value[h.ticker]) {
-        h.currentPrice = prices.value[h.ticker];
-        h.unrealizedGain = (h.currentPrice - h.avg_cost) * h.shares;
-        h.unrealizedGainPercent = (h.currentPrice / h.avg_cost - 1) * 100;
+        h.current_price = prices.value[h.ticker];
+        h.unrealized_gain = (h.current_price - h.avg_cost) * h.shares;
+        h.unrealized_gain_percent = (h.current_price / h.avg_cost - 1) * 100;
       }
     });
 
@@ -109,21 +109,21 @@ export function usePortfolio() {
     loadHoldings();
     loadPrices();
 
-    const totalCost = holdings.value.reduce((sum, h) => sum + h.total_cost, 0);
-    const totalValue = holdings.value.reduce(
-      (sum, h) => sum + (h.currentPrice || h.avg_cost) * h.shares,
+    const total_cost = holdings.value.reduce((sum, h) => sum + h.total_cost, 0);
+    const total_value = holdings.value.reduce(
+      (sum, h) => sum + (h.current_price || h.avg_cost) * h.shares,
       0,
     );
-    const totalUnrealized = holdings.value.reduce((sum, h) => sum + (h.unrealizedGain || 0), 0);
-    const realizedGain = getRealizedGain();
+    const total_unrealized = holdings.value.reduce((sum, h) => sum + (h.unrealized_gain || 0), 0);
+    const realized_gain = getRealizedGain();
 
     return {
       holdings: holdings.value,
-      totalCost,
-      totalValue,
-      totalUnrealized,
-      totalGain: totalUnrealized + realizedGain,
-      realizedGain,
+      total_cost,
+      total_value,
+      total_unrealized,
+      total_gain: total_unrealized + realized_gain,
+      realized_gain,
     };
   }
 

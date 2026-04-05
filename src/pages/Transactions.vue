@@ -7,24 +7,24 @@ import { useStockList } from '../composables/useStockList';
 import { useTransactions, type TransactionInput } from '../composables/useTransactions';
 import { exportToCsv, parseCsv } from '../utils/csv';
 
-const { isReady } = useDatabase();
+const { is_ready } = useDatabase();
 const { transactions, loadTransactions, addTransaction, deleteTransaction } = useTransactions();
 const { loadStockList } = useStockList();
 const showSnackbar = inject<(text: string, color?: string) => void>('showSnackbar');
 const showConfirm = inject<(message: string) => Promise<boolean>>('showConfirm');
 
-const fileInput = ref<HTMLInputElement | null>(null);
-const importLoading = ref(false);
-const updatingStocks = ref(false);
+const file_input = ref<HTMLInputElement | null>(null);
+const import_loading = ref(false);
+const updating_stocks = ref(false);
 
-const updateStockList = async () => {
-  updatingStocks.value = true;
+async function updateStockList() {
+  updating_stocks.value = true;
   await loadStockList();
-  updatingStocks.value = false;
+  updating_stocks.value = false;
   showSnackbar?.('已更新商品代號資料庫');
-};
+}
 
-const exportCsv = () => {
+function exportCsv() {
   const data = transactions.value.map(t => ({
     日期: t.date,
     代號: t.ticker,
@@ -39,18 +39,18 @@ const exportCsv = () => {
   }));
   const date = new Date().toISOString().split('T')[0];
   exportToCsv(data, `transactions-${date}.csv`);
-};
+}
 
-const triggerImport = () => {
-  fileInput.value?.click();
-};
+function triggerImport() {
+  file_input.value?.click();
+}
 
-const handleFileImport = async (event: Event) => {
+async function handleFileImport(event: Event) {
   const target = event.target as HTMLInputElement;
   const file = target.files?.[0];
   if (!file) return;
 
-  importLoading.value = true;
+  import_loading.value = true;
   try {
     const text = await file.text();
     const rows = parseCsv(text);
@@ -87,25 +87,27 @@ const handleFileImport = async (event: Event) => {
     console.error('Import error:', e);
     showSnackbar?.('匯入失敗', 'error');
   } finally {
-    importLoading.value = false;
+    import_loading.value = false;
     target.value = '';
   }
-};
+}
 
-const formatDate = (date: string) => (date ? date.replace(/-/g, '/') : '');
+function formatDate(date: string) {
+  return date ? date.replace(/-/g, '/') : '';
+}
 
-const formatDateToString = (date: Date | string): string => {
+function formatDateToString(date: Date | string): string {
   if (!date) return '';
   if (typeof date === 'string') return date;
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
-};
+}
 
 interface TransactionForm {
   date: string;
-  datePicker: string;
+  date_picker: string;
   ticker: string;
   name: string;
   type: 'buy' | 'sell';
@@ -117,7 +119,7 @@ interface TransactionForm {
 
 const form = ref<TransactionForm>({
   date: formatDateToString(new Date()),
-  datePicker: formatDateToString(new Date()),
+  date_picker: formatDateToString(new Date()),
   ticker: '',
   name: '',
   type: 'buy',
@@ -127,96 +129,96 @@ const form = ref<TransactionForm>({
   tax: '',
 });
 
-const dateMenu = ref(false);
-const startDateMenu = ref(false);
-const endDateMenu = ref(false);
+const date_menu = ref(false);
+const start_date_menu = ref(false);
+const end_date_menu = ref(false);
 
-const updateFormDate = (val: Date | string) => {
+function updateFormDate(val: Date | string) {
   if (!val) return;
-  const dateStr = formatDateToString(val);
-  if (dateStr && dateStr.length === 10) {
-    form.value.date = dateStr;
-    form.value.datePicker = dateStr;
+  const date_str = formatDateToString(val);
+  if (date_str && date_str.length === 10) {
+    form.value.date = date_str;
+    form.value.date_picker = date_str;
   } else {
-    form.value.datePicker = dateStr;
+    form.value.date_picker = date_str;
   }
-};
+}
 
-const confirmFormDate = () => {
-  updateFormDate(form.value.datePicker);
-  dateMenu.value = false;
-};
+function confirmFormDate() {
+  updateFormDate(form.value.date_picker);
+  date_menu.value = false;
+}
 
-const adjustShares = (delta: number) => {
+function adjustShares(delta: number) {
   const current = parseInt(form.value.shares) || 0;
-  const newValue = current + delta;
-  if (newValue > 0) {
-    form.value.shares = String(newValue);
+  const new_val = current + delta;
+  if (new_val > 0) {
+    form.value.shares = String(new_val);
   }
-};
+}
 
 interface TransactionFilters {
   ticker: string;
   name: string;
   type: string;
-  startDate: string;
-  startDatePicker: string;
-  endDate: string;
-  endDatePicker: string;
+  start_date: string;
+  start_date_picker: string;
+  end_date: string;
+  end_date_picker: string;
 }
 
 const filters = ref<TransactionFilters>({
   ticker: '',
   name: '',
   type: '',
-  startDate: '',
-  startDatePicker: '',
-  endDate: '',
-  endDatePicker: '',
+  start_date: '',
+  start_date_picker: '',
+  end_date: '',
+  end_date_picker: '',
 });
 
-const updateStartDate = (val: Date | string) => {
+function updateStartDate(val: Date | string) {
   if (!val) return;
-  const dateStr = formatDateToString(val);
-  if (dateStr && dateStr.length === 10) {
-    filters.value.startDate = dateStr;
-    filters.value.startDatePicker = dateStr;
+  const date_str = formatDateToString(val);
+  if (date_str && date_str.length === 10) {
+    filters.value.start_date = date_str;
+    filters.value.start_date_picker = date_str;
   } else {
-    filters.value.startDatePicker = dateStr;
+    filters.value.start_date_picker = date_str;
   }
-};
+}
 
-const confirmStartDate = () => {
-  updateStartDate(filters.value.startDatePicker);
-  startDateMenu.value = false;
+function confirmStartDate() {
+  updateStartDate(filters.value.start_date_picker);
+  start_date_menu.value = false;
   applyFilters();
-};
+}
 
-const updateEndDate = (val: Date | string) => {
+function updateEndDate(val: Date | string) {
   if (!val) return;
-  const dateStr = formatDateToString(val);
-  if (dateStr && dateStr.length === 10) {
-    filters.value.endDate = dateStr;
-    filters.value.endDatePicker = dateStr;
+  const date_str = formatDateToString(val);
+  if (date_str && date_str.length === 10) {
+    filters.value.end_date = date_str;
+    filters.value.end_date_picker = date_str;
   } else {
-    filters.value.endDatePicker = dateStr;
+    filters.value.end_date_picker = date_str;
   }
-};
+}
 
-const confirmEndDate = () => {
-  updateEndDate(filters.value.endDatePicker);
-  endDateMenu.value = false;
+function confirmEndDate() {
+  updateEndDate(filters.value.end_date_picker);
+  end_date_menu.value = false;
   applyFilters();
-};
+}
 
-const computedTotal = computed(() => {
+const computed_total = computed(() => {
   const shares = parseFloat(form.value.shares) || 0;
   const price = parseFloat(form.value.price) || 0;
   return shares * price;
 });
 
-const computedNetAmount = computed(() => {
-  const total = computedTotal.value;
+const computed_net_amount = computed(() => {
+  const total = computed_total.value;
   const fee = parseFloat(form.value.fee) || 0;
   const tax = parseFloat(form.value.tax) || 0;
 
@@ -227,7 +229,7 @@ const computedNetAmount = computed(() => {
   }
 });
 
-const submitForm = () => {
+function submitForm() {
   if (!form.value.date || !form.value.ticker || !form.value.shares || !form.value.price) {
     showSnackbar?.('請填寫必填欄位', 'warning');
     return;
@@ -246,7 +248,7 @@ const submitForm = () => {
 
   form.value = {
     date: formatDateToString(new Date()),
-    datePicker: formatDateToString(new Date()),
+    date_picker: formatDateToString(new Date()),
     ticker: '',
     name: '',
     type: 'buy',
@@ -257,40 +259,40 @@ const submitForm = () => {
   };
 
   loadTransactions(filters.value);
-};
+}
 
-const applyFilters = () => {
+function applyFilters() {
   loadTransactions(filters.value);
-};
+}
 
-const clearFilters = () => {
+function clearFilters() {
   filters.value = {
     ticker: '',
     name: '',
     type: '',
-    startDate: '',
-    startDatePicker: '',
-    endDate: '',
-    endDatePicker: '',
+    start_date: '',
+    start_date_picker: '',
+    end_date: '',
+    end_date_picker: '',
   };
   loadTransactions();
-};
+}
 
-const handleDelete = async (id: string) => {
+async function handleDelete(id: string) {
   if (await showConfirm?.('確定要刪除這筆紀錄嗎？')) {
     deleteTransaction(id);
     loadTransactions(filters.value);
   }
-};
+}
 
-watch(isReady, ready => {
+watch(is_ready, ready => {
   if (ready) {
     loadTransactions();
   }
 });
 
 onMounted(() => {
-  if (isReady.value) {
+  if (is_ready.value) {
     loadTransactions();
   }
 });
@@ -304,7 +306,7 @@ onMounted(() => {
         class="ml-auto"
         variant="tonal"
         size="small"
-        :loading="updatingStocks"
+        :loading="updating_stocks"
         @click="updateStockList"
       >
         更新商品代號資料庫
@@ -317,7 +319,7 @@ onMounted(() => {
         <v-form @submit.prevent="submitForm">
           <v-row>
             <v-col cols="12" sm="6" md="3">
-              <v-menu v-model="dateMenu" :close-on-content-click="false" :close-on-esc="false">
+              <v-menu v-model="date_menu" :close-on-content-click="false" :close-on-esc="false">
                 <template #activator="{ props }">
                   <v-text-field
                     v-model="form.date"
@@ -328,7 +330,7 @@ onMounted(() => {
                     v-bind="props"
                   />
                 </template>
-                <v-date-picker v-model="form.datePicker" hide-title color="primary">
+                <v-date-picker v-model="form.date_picker" hide-title color="primary">
                   <template #actions>
                     <v-btn text color="primary" @click="confirmFormDate"> 確認 </v-btn>
                   </template>
@@ -401,7 +403,7 @@ onMounted(() => {
 
             <v-col cols="12" sm="6" md="3">
               <v-text-field
-                :model-value="computedTotal.toLocaleString()"
+                :model-value="computed_total.toLocaleString()"
                 label="成交價金"
                 variant="outlined"
                 density="compact"
@@ -438,7 +440,7 @@ onMounted(() => {
                 <div class="mr-2 text-grey text-body-large">淨收付</div>
                 <div
                   :class="
-                    computedNetAmount === 0
+                    computed_net_amount === 0
                       ? 'text-grey'
                       : form.type === 'buy'
                         ? 'text-error'
@@ -446,8 +448,8 @@ onMounted(() => {
                   "
                   class="text-body-extra-large font-weight-bold"
                 >
-                  {{ computedNetAmount === 0 ? '$' : form.type === 'buy' ? '-$' : '+$'
-                  }}{{ computedNetAmount.toLocaleString() }}
+                  {{ computed_net_amount === 0 ? '$' : form.type === 'buy' ? '-$' : '+$'
+                  }}{{ computed_net_amount.toLocaleString() }}
                 </div>
               </div>
 
@@ -490,10 +492,10 @@ onMounted(() => {
             />
           </v-col>
           <v-col cols="6" sm="3" md="2">
-            <v-menu v-model="startDateMenu" :close-on-content-click="false" :close-on-esc="false">
+            <v-menu v-model="start_date_menu" :close-on-content-click="false" :close-on-esc="false">
               <template #activator="{ props }">
                 <v-text-field
-                  v-model="filters.startDate"
+                  v-model="filters.start_date"
                   label="開始日期"
                   variant="outlined"
                   density="compact"
@@ -502,7 +504,7 @@ onMounted(() => {
                   v-bind="props"
                 />
               </template>
-              <v-date-picker v-model="filters.startDatePicker" hide-title color="primary">
+              <v-date-picker v-model="filters.start_date_picker" hide-title color="primary">
                 <template #actions>
                   <v-btn text color="primary" @click="confirmStartDate"> 確認 </v-btn>
                 </template>
@@ -510,10 +512,10 @@ onMounted(() => {
             </v-menu>
           </v-col>
           <v-col cols="6" sm="3" md="2">
-            <v-menu v-model="endDateMenu" :close-on-content-click="false" :close-on-esc="false">
+            <v-menu v-model="end_date_menu" :close-on-content-click="false" :close-on-esc="false">
               <template #activator="{ props }">
                 <v-text-field
-                  v-model="filters.endDate"
+                  v-model="filters.end_date"
                   label="結束日期"
                   variant="outlined"
                   density="compact"
@@ -522,7 +524,7 @@ onMounted(() => {
                   v-bind="props"
                 />
               </template>
-              <v-date-picker v-model="filters.endDatePicker" hide-title color="primary">
+              <v-date-picker v-model="filters.end_date_picker" hide-title color="primary">
                 <template #actions>
                   <v-btn text color="primary" @click="confirmEndDate"> 確認 </v-btn>
                 </template>
@@ -536,11 +538,11 @@ onMounted(() => {
             <v-btn color="success" variant="outlined" @click="exportCsv" class="mr-2"
               >匯出 CSV</v-btn
             >
-            <v-btn color="info" variant="outlined" @click="triggerImport" :loading="importLoading"
+            <v-btn color="info" variant="outlined" @click="triggerImport" :loading="import_loading"
               >匯入 CSV</v-btn
             >
             <input
-              ref="fileInput"
+              ref="file_input"
               type="file"
               accept=".csv"
               style="display: none"
