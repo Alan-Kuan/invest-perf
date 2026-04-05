@@ -171,6 +171,11 @@ The project is a Vue 3 investment performance tracking web app.
 - Keep subject line under 50 characters
 - Reference issue numbers when applicable
 
+### Commit Hooks
+
+- Pre-commit hook runs automatically before each commit: `pnpm typecheck && pnpm lint && pnpm fmt`
+- Hooks are configured via Husky in `.husky/pre-commit`
+
 ## Additional Notes
 
 ### WASM Configuration
