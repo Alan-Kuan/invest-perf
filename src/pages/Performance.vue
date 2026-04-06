@@ -487,7 +487,7 @@ onMounted(() => {
                       class="text-body-small"
                       v-html="
                         katex.renderToString(
-                          '已實現報酬成本 = \\sum (買入均價 \\times 賣出股數 - 實發股利 \\times \\dfrac{賣出股數}{總初始股數})',
+                          '\\text{已實現報酬成本} = \\sum (\\text{買入均價} \\times \\text{賣出股數} - \\text{實發股利} \\times \\dfrac{\\text{賣出股數}}{\\text{總初始股數}})',
                           { throwOnError: false },
                         )
                       "
@@ -498,7 +498,7 @@ onMounted(() => {
                       class="text-body-small"
                       v-html="
                         katex.renderToString(
-                          '未實現報酬成本 = \\sum (買入均價 \\times 剩餘股數 - 實發股利 \\times \\dfrac{剩餘股數}{總初始股數})',
+                          '\\text{未實現報酬成本} = \\sum (\\text{買入均價} \\times \\text{剩餘股數} - \\text{實發股利} \\times \\dfrac{\\text{剩餘股數}}{\\text{總初始股數}})',
                           { throwOnError: false },
                         )
                       "
@@ -509,7 +509,7 @@ onMounted(() => {
                       class="text-body-small"
                       v-html="
                         katex.renderToString(
-                          '已實現報酬率 = \\dfrac{\\sum (賣出價 \\times 賣出股數) - 已實現報酬成本}{已實現報酬成本} \\times 100\\%',
+                          '\\text{已實現報酬率} = \\dfrac{\\sum (\\text{賣出價} \\times \\text{賣出股數}) - \\text{已實現報酬成本}}{\\text{已實現報酬成本}} \\times 100\\%',
                           { throwOnError: false },
                         )
                       "
@@ -520,7 +520,7 @@ onMounted(() => {
                       class="text-body-small"
                       v-html="
                         katex.renderToString(
-                          '未實現報酬率 = \\dfrac{\\sum (期末收盤價 \\times 賣出股數) - 未實現報酬成本}{未實現報酬成本} \\times 100\\%',
+                          '\\text{未實現報酬率} = \\dfrac{\\sum (\\text{期末收盤價} \\times \\text{賣出股數}) - \\text{未實現報酬成本}}{\\text{未實現報酬成本}} \\times 100\\%',
                           { throwOnError: false },
                         )
                       "
@@ -531,7 +531,7 @@ onMounted(() => {
                       class="text-body-small"
                       v-html="
                         katex.renderToString(
-                          '總報酬率 = 已實現報酬率 \\times \\dfrac{賣出股數}{總初始股數} + 未實現報酬率 \\times \\dfrac{剩餘股數}{總初始股數}',
+                          '\\text{總報酬率} = \\text{已實現報酬率} \\times \\dfrac{\\text{賣出股數}}{\\text{總初始股數}} + \\text{未實現報酬率} \\times \\dfrac{\\text{剩餘股數}}{\\text{總初始股數}}',
                           { throwOnError: false },
                         )
                       "
