@@ -298,13 +298,3 @@ onUnmounted(() => {
     </v-card>
   </div>
 </template>
-
-<style scoped>
-.summary-highlight {
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-}
-
-.summary-highlight .text-body-small {
-  color: #aaa;
-}
-</style>
