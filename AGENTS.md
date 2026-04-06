@@ -45,8 +45,6 @@ The project is a Vue 3 investment performance tracking web app.
 
 - `transactions`: Buy/sell records
 - `dividends`: Cash and stock dividends
-- `prices`: Current stock prices
-- `stocks`: Stock ticker/name mapping
 - `historical_prices`: Historical price data
 
 ### API Configuration

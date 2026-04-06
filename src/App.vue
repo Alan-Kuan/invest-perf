@@ -87,10 +87,12 @@ async function handleClear() {
 }
 
 async function handleClearCache() {
-  if (!(await showConfirm('確定要清除快取嗎？'))) {
+  if (!(await showConfirm('確定要清除績效快取、股票現價快取與股票名稱快取嗎？'))) {
     return;
   }
   localStorage.removeItem('annual_performance_cache');
+  localStorage.removeItem('stock_prices_cache');
+  localStorage.removeItem('stock_list_cache');
   showSnackbar('快取已清除');
 }
 </script>

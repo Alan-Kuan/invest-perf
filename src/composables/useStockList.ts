@@ -1,7 +1,4 @@
-import type { SqlValue } from 'sql.js/dist/sql-wasm.js';
 import { ref } from 'vue';
-
-import { getDatabase, saveDatabase } from '../db';
 
 interface Stock {
   ticker: string;
@@ -23,17 +20,20 @@ export function useStockList() {
 
     is_loading.value = true;
 
-    const db = getDatabase();
-
-    if (db) {
-      const result = db.exec('SELECT ticker, name FROM stocks ORDER BY ticker');
-      if (result.length > 0 && result[0].values.length > 0) {
-        stock_list.value = result[0].values.map((row: SqlValue[]) => ({
-          ticker: row[0] as string,
-          name: row[1] as string,
-        }));
+    const stored = localStorage.getItem('stock_list_cache');
+    if (stored) {
+      try {
+        const cached_map = JSON.parse(stored) as Record<string, string>;
+        stock_list.value = Object.entries(cached_map)
+          .map(([ticker, name]) => ({
+            ticker,
+            name,
+          }))
+          .sort((a, b) => a.ticker.localeCompare(b.ticker));
         is_loading.value = false;
         return stock_list.value;
+      } catch {
+        // continue to fetch
       }
     }
 
@@ -45,38 +45,29 @@ export function useStockList() {
 
       const [stock_data, etf_data] = await Promise.all([stock_res.json(), etf_res.json()]);
 
-      const stock_map = new Map<string, string>();
+      const stock_map: Record<string, string> = {};
 
       if (Array.isArray(stock_data)) {
         for (const item of stock_data) {
-          stock_map.set(item.Code, item.Name);
+          stock_map[item.Code] = item.Name;
         }
       }
 
       if (Array.isArray(etf_data)) {
         for (const item of etf_data) {
-          if (!stock_map.has(item.Code)) {
-            stock_map.set(item.Code, item.Name);
+          if (!stock_map[item.Code]) {
+            stock_map[item.Code] = item.Name;
           }
         }
       }
 
-      const stocks: Stock[] = Array.from(stock_map.entries()).map(([ticker, name]) => ({
-        ticker,
-        name,
-      }));
-
-      if (db && stocks.length > 0) {
-        db.run('DELETE FROM stocks');
-        const stmt = db.prepare('INSERT INTO stocks (ticker, name) VALUES (?, ?)');
-        for (const stock of stocks) {
-          stmt.run([stock.ticker, stock.name]);
-        }
-        stmt.free();
-        await saveDatabase();
-      }
-
-      stock_list.value = stocks;
+      localStorage.setItem('stock_list_cache', JSON.stringify(stock_map));
+      stock_list.value = Object.entries(stock_map)
+        .map(([ticker, name]) => ({
+          ticker,
+          name,
+        }))
+        .sort((a, b) => a.ticker.localeCompare(b.ticker));
     } catch (e) {
       console.error('Failed to fetch stock list:', e);
     }
@@ -90,14 +81,11 @@ export function useStockList() {
 
     const exists = stock_list.value.find(s => s.ticker === stock.ticker);
     if (!exists) {
-      const db = getDatabase();
-      if (db) {
-        db.run('INSERT OR REPLACE INTO stocks (ticker, name) VALUES (?, ?)', [
-          stock.ticker,
-          stock.name || '',
-        ]);
-        await saveDatabase();
-      }
+      const stored = localStorage.getItem('stock_list_cache');
+      const stock_map = stored ? (JSON.parse(stored) as Record<string, string>) : {};
+
+      stock_map[stock.ticker] = stock.name || '';
+      localStorage.setItem('stock_list_cache', JSON.stringify(stock_map));
 
       stock_list.value.push({ ticker: stock.ticker, name: stock.name || '' });
       stock_list.value.sort((a, b) => a.ticker.localeCompare(b.ticker));

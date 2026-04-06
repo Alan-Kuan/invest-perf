@@ -18,7 +18,7 @@ interface PriceData {
 }
 
 export function usePortfolio() {
-  const { query, execute } = useDatabase();
+  const { query } = useDatabase();
   const holdings = ref<Holding[]>([]);
   const prices = ref<PriceData>({});
 
@@ -51,10 +51,14 @@ export function usePortfolio() {
   }
 
   function loadPrices(): PriceData {
-    const price_data = query('SELECT * FROM prices') as { ticker: string; price: number }[];
-    price_data.forEach(p => {
-      prices.value[p.ticker] = p.price;
-    });
+    const stored = localStorage.getItem('stock_prices_cache');
+    if (stored) {
+      try {
+        prices.value = JSON.parse(stored);
+      } catch {
+        prices.value = {};
+      }
+    }
 
     holdings.value.forEach(h => {
       if (prices.value[h.ticker]) {
@@ -68,11 +72,8 @@ export function usePortfolio() {
   }
 
   function updatePrice(ticker: string, price: number): void {
-    execute(
-      `INSERT OR REPLACE INTO prices (ticker, price, updated_at) VALUES (?, ?, datetime('now'))`,
-      [ticker, price],
-    );
     prices.value[ticker] = price;
+    localStorage.setItem('stock_prices_cache', JSON.stringify(prices.value));
     loadHoldings();
   }
 

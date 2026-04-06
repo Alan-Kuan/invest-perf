@@ -117,21 +117,6 @@ function createTables(): void {
   `);
 
   db.run(`
-    CREATE TABLE IF NOT EXISTS prices (
-      ticker TEXT PRIMARY KEY,
-      price REAL NOT NULL,
-      updated_at TEXT DEFAULT (datetime('now'))
-    )
-  `);
-
-  db.run(`
-    CREATE TABLE IF NOT EXISTS stocks (
-      ticker TEXT PRIMARY KEY,
-      name TEXT NOT NULL
-    )
-  `);
-
-  db.run(`
     CREATE TABLE IF NOT EXISTS historical_prices (
       ticker TEXT NOT NULL,
       date TEXT NOT NULL,
