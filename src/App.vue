@@ -85,6 +85,14 @@ async function handleClear() {
   await clear();
   window.location.reload();
 }
+
+async function handleClearCache() {
+  if (!(await showConfirm('確定要清除快取嗎？'))) {
+    return;
+  }
+  localStorage.removeItem('annual_performance_cache');
+  showSnackbar('快取已清除');
+}
 </script>
 
 <template>
@@ -155,6 +163,13 @@ async function handleClear() {
               prepend-icon="mdi-delete"
               title="清除資料庫"
               class="text-error rounded-lg px-2"
+              density="compact"
+            />
+            <v-list-item
+              @click="handleClearCache"
+              prepend-icon="mdi-trash-can-outline"
+              title="清除快取"
+              class="rounded-lg px-2"
               density="compact"
             />
             <input

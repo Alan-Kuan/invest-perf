@@ -33,7 +33,7 @@ ChartJS.register(
   Filler,
 );
 
-const { is_ready, query, execute } = useDatabase();
+const { is_ready, query } = useDatabase();
 const { transactions, loadTransactions } = useTransactions();
 const { dividends, loadDividends, getDividendsByTicker } = useDividends();
 const { getPortfolioSummary, getRealizedGain } = usePortfolio();
@@ -225,52 +225,25 @@ async function loadAnnualPerformance() {
   }
 
   annual_performance.value = annual_data_list;
-  await saveAnnualPerformanceCache(annual_performance.value);
+  saveAnnualPerformanceCache(annual_performance.value);
 }
 
-async function loadAnnualPerformanceCache(): Promise<AnnualData[]> {
-  const cached = query('SELECT * FROM annual_performance ORDER BY year ASC') as {
-    year: number;
-    realized_return_rate: number;
-    unrealized_return_rate: number;
-    total_return_rate: number;
-    total_gain: number;
-  }[];
-
-  if (cached.length === 0) return [];
-
-  return cached.map(c => ({
-    year: c.year,
-    realized_return_rate: c.realized_return_rate,
-    unrealized_return_rate: c.unrealized_return_rate,
-    total_return_rate: c.total_return_rate,
-    total_gain: c.total_gain,
-  }));
+interface AnnualDataCache {
+  data: AnnualData[];
+  calculated_at: string;
 }
 
-async function saveAnnualPerformanceCache(data: AnnualData[]): Promise<void> {
-  for (const d of data) {
-    execute(
-      `INSERT OR REPLACE INTO annual_performance
-       (year, realized_return_rate, unrealized_return_rate, total_return_rate, total_gain, calculated_at)
-       VALUES (?, ?, ?, ?, ?, datetime('now'))`,
-      [
-        d.year,
-        d.realized_return_rate || 0,
-        d.unrealized_return_rate || 0,
-        d.total_return_rate || 0,
-        d.total_gain || 0,
-      ],
-    );
-  }
+function saveAnnualPerformanceCache(data: AnnualData[]) {
+  const cache: AnnualDataCache = {
+    data,
+    calculated_at: new Date().toISOString().split('T')[0],
+  };
+  localStorage.setItem('annual_performance_cache', JSON.stringify(cache));
 }
 
 async function checkAndRecalculate(): Promise<void> {
-  const current_year = new Date().getFullYear();
-  const cached = query('SELECT * FROM annual_performance WHERE year = ?', [current_year]) as {
-    year: number;
-    calculated_at: string;
-  }[];
+  const stored = localStorage.getItem('annual_performance_cache');
+  const cached = stored ? (JSON.parse(stored) as AnnualDataCache) : null;
 
   const latest_transaction = query('SELECT MAX(date) as max_date FROM transactions') as {
     max_date: string;
@@ -284,22 +257,19 @@ async function checkAndRecalculate(): Promise<void> {
 
   let need_recalculate = false;
 
-  if (cached.length === 0) {
+  if (!cached) {
     need_recalculate = true;
-  } else {
-    const cached_date = cached[0].calculated_at.substring(0, 10);
-    if (latest_data_date > cached_date || latest_dividend_date > cached_date) {
-      need_recalculate = true;
-    }
+  } else if (
+    latest_data_date > cached.calculated_at ||
+    latest_dividend_date > cached.calculated_at
+  ) {
+    need_recalculate = true;
   }
 
   if (need_recalculate) {
     await loadAnnualPerformance();
-  } else {
-    const cached_data = await loadAnnualPerformanceCache();
-    if (cached_data.length > 0) {
-      annual_performance.value = cached_data;
-    }
+  } else if (cached) {
+    annual_performance.value = cached.data;
   }
 }
 

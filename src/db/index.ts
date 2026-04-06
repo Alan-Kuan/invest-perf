@@ -84,19 +84,6 @@ export async function initDatabase(): Promise<Database> {
 function createTables(): void {
   if (!db) return;
 
-  const table_exists = db.exec(
-    "SELECT name FROM sqlite_master WHERE type='table' AND name='annual_performance'",
-  );
-
-  if (table_exists.length > 0) {
-    const columns = db.exec('PRAGMA table_info(annual_performance)');
-    const has_old_columns = columns[0]?.values?.some((col: any) => col[1] === 'realized_gain');
-
-    if (has_old_columns) {
-      db.run('DROP TABLE annual_performance');
-    }
-  }
-
   db.run(`
     CREATE TABLE IF NOT EXISTS transactions (
       id TEXT PRIMARY KEY,
@@ -141,16 +128,6 @@ function createTables(): void {
     CREATE TABLE IF NOT EXISTS stocks (
       ticker TEXT PRIMARY KEY,
       name TEXT NOT NULL
-    )
-  `);
-
-  db.run(`
-    CREATE TABLE IF NOT EXISTS annual_performance (
-      year INTEGER PRIMARY KEY,
-      realized_return_rate REAL NOT NULL,
-      unrealized_return_rate REAL NOT NULL,
-      total_return_rate REAL NOT NULL,
-      calculated_at TEXT NOT NULL
     )
   `);
 
