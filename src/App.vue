@@ -114,17 +114,17 @@ async function handleClearCache() {
             class="mb-1 rounded-lg px-2"
           />
           <v-list-item
-            to="/portfolio"
-            prepend-icon="mdi-chart-pie"
-            title="組合"
-            value="portfolio"
-            class="mb-1 rounded-lg px-2"
-          />
-          <v-list-item
             to="/dividends"
             prepend-icon="mdi-cash"
             title="股利"
             value="dividends"
+            class="mb-1 rounded-lg px-2"
+          />
+          <v-list-item
+            to="/portfolio"
+            prepend-icon="mdi-chart-pie"
+            title="組合"
+            value="portfolio"
             class="mb-1 rounded-lg px-2"
           />
           <v-list-item
