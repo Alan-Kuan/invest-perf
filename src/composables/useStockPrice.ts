@@ -12,7 +12,7 @@ function delay(ms: number): Promise<void> {
 export function useStockPrice() {
   const { query, execute } = useDatabase();
 
-  function loadFromDb(ticker: string, date: string): number | null {
+  const loadFromDb = (ticker: string, date: string): number | null => {
     const results = query('SELECT price FROM historical_prices WHERE ticker = ? AND date = ?', [
       ticker,
       date,
@@ -21,16 +21,16 @@ export function useStockPrice() {
       return results[0].price as number;
     }
     return null;
-  }
+  };
 
-  async function saveToDb(ticker: string, date: string, price: number): Promise<void> {
+  const saveToDb = async (ticker: string, date: string, price: number): Promise<void> => {
     await execute(
       `INSERT OR REPLACE INTO historical_prices (ticker, date, price, updated_at) VALUES (?, ?, ?, datetime('now'))`,
       [ticker, date, price],
     );
-  }
+  };
 
-  async function fetchPricesBatch(tickers: string[]): Promise<Record<string, number>> {
+  const fetchPricesBatch = async (tickers: string[]): Promise<Record<string, number>> => {
     if (tickers.length === 0) return {};
 
     try {
@@ -69,9 +69,9 @@ export function useStockPrice() {
       console.error('Batch fetch failed:', e);
       return {};
     }
-  }
+  };
 
-  async function fetchHistoricalPrice(ticker: string, date: string): Promise<number | null> {
+  const fetchHistoricalPrice = async (ticker: string, date: string): Promise<number | null> => {
     const cached = historical_price_cache.get(ticker)?.get(date);
 
     if (cached !== undefined && typeof cached === 'number') {
@@ -135,7 +135,7 @@ export function useStockPrice() {
     }
 
     return null;
-  }
+  };
 
   return {
     fetchPricesBatch,

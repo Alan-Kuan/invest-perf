@@ -42,7 +42,7 @@ export function useTransactions() {
   const transactions = ref<Transaction[]>([]);
   const current_filters = ref<TransactionFilters>({});
 
-  function loadTransactions(filters: TransactionFilters = {}): Transaction[] {
+  const loadTransactions = (filters: TransactionFilters = {}): Transaction[] => {
     current_filters.value = filters;
     let sql = 'SELECT * FROM transactions WHERE 1=1';
     const params: string[] = [];
@@ -72,9 +72,9 @@ export function useTransactions() {
 
     transactions.value = query(sql, params) as unknown as Transaction[];
     return transactions.value;
-  }
+  };
 
-  function addTransaction(data: TransactionInput): string {
+  const addTransaction = (data: TransactionInput): string => {
     const id = generateId();
     const total = data.shares * data.price;
     const fee = data.fee || 0;
@@ -107,9 +107,9 @@ export function useTransactions() {
 
     loadTransactions(current_filters.value);
     return id;
-  }
+  };
 
-  function updateTransaction(id: string, data: TransactionInput): void {
+  const updateTransaction = (id: string, data: TransactionInput): void => {
     const total = data.shares * data.price;
     const fee = data.fee || 0;
     const tax = data.tax || 0;
@@ -139,12 +139,12 @@ export function useTransactions() {
     );
 
     loadTransactions(current_filters.value);
-  }
+  };
 
-  function deleteTransaction(id: string): void {
+  const deleteTransaction = (id: string): void => {
     execute('DELETE FROM transactions WHERE id = ?', [id]);
     loadTransactions(current_filters.value);
-  }
+  };
 
   return {
     transactions,

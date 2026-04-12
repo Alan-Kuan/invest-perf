@@ -98,6 +98,7 @@ The project is a Vue 3 investment performance tracking web app.
 - Empty lines: Use to separate logical sections (max 2 consecutive blank lines)
 - Function declarations: Use `function` keyword instead of arrow functions assigned to variables
   - Exception: Vue component `computed` properties should use arrow functions for proper `this` binding
+  - Exception: Nested functions (e.g., within composables) should use arrow functions
 
 ### Imports
 

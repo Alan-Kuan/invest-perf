@@ -17,7 +17,7 @@ interface QueryResult {
 const is_ready = ref(false);
 
 export function useDatabase() {
-  async function init(): Promise<void> {
+  const init = async (): Promise<void> => {
     if (is_ready.value) return;
 
     try {
@@ -26,9 +26,9 @@ export function useDatabase() {
     } catch (e) {
       console.error('Database init error:', e);
     }
-  }
+  };
 
-  function query(sql: string, params: SqlValue[] = []): QueryResult[] {
+  const query = (sql: string, params: SqlValue[] = []): QueryResult[] => {
     const db = getDatabase();
     if (!db) return [];
 
@@ -49,9 +49,9 @@ export function useDatabase() {
       console.error('Query error:', e);
       return [];
     }
-  }
+  };
 
-  async function execute(sql: string, params: SqlValue[] = []): Promise<void> {
+  const execute = async (sql: string, params: SqlValue[] = []): Promise<void> => {
     const db = getDatabase();
     if (!db) return;
 
@@ -61,9 +61,9 @@ export function useDatabase() {
     } catch (e) {
       console.error('Execute error:', e);
     }
-  }
+  };
 
-  async function exportData(): Promise<void> {
+  const exportData = async (): Promise<void> => {
     const data = await exportDatabase();
     if (!data) return;
 
@@ -77,9 +77,9 @@ export function useDatabase() {
     a.download = filename;
     a.click();
     URL.revokeObjectURL(url);
-  }
+  };
 
-  async function importData(file: File): Promise<boolean> {
+  const importData = async (file: File): Promise<boolean> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
 
@@ -96,12 +96,12 @@ export function useDatabase() {
       reader.onerror = () => reject(reader.error);
       reader.readAsArrayBuffer(file);
     });
-  }
+  };
 
-  async function clear(): Promise<void> {
+  const clear = async (): Promise<void> => {
     await clearDatabase();
     is_ready.value = false;
-  }
+  };
 
   return {
     is_ready,

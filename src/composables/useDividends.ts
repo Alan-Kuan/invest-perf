@@ -40,7 +40,7 @@ export function useDividends() {
   const dividends = ref<Dividend[]>([]);
   const current_filters = ref<DividendFilters>({});
 
-  function loadDividends(filters: DividendFilters = {}): Dividend[] {
+  const loadDividends = (filters: DividendFilters = {}): Dividend[] => {
     current_filters.value = filters;
     let sql = 'SELECT * FROM dividends WHERE 1=1';
     const params: string[] = [];
@@ -75,9 +75,9 @@ export function useDividends() {
 
     dividends.value = query(sql, params) as unknown as Dividend[];
     return dividends.value;
-  }
+  };
 
-  function addDividend(data: DividendInput): string {
+  const addDividend = (data: DividendInput): string => {
     const id = generateId();
     const amount = data.shares * data.per_share - (data.fee || 0);
 
@@ -99,9 +99,9 @@ export function useDividends() {
 
     loadDividends(current_filters.value);
     return id;
-  }
+  };
 
-  function updateDividend(id: string, data: DividendInput): void {
+  const updateDividend = (id: string, data: DividendInput): void => {
     const amount = data.shares * data.per_share - (data.fee || 0);
 
     execute(
@@ -120,20 +120,20 @@ export function useDividends() {
     );
 
     loadDividends(current_filters.value);
-  }
+  };
 
-  function deleteDividend(id: string): void {
+  const deleteDividend = (id: string): void => {
     execute('DELETE FROM dividends WHERE id = ?', [id]);
     loadDividends(current_filters.value);
-  }
+  };
 
-  function getAvailableYears(): string[] {
+  const getAvailableYears = (): string[] => {
     const sql = `SELECT DISTINCT strftime('%Y', pay_date) as year FROM dividends ORDER BY year DESC`;
     const result = query(sql) as { year: string }[];
     return result.map(r => r.year);
-  }
+  };
 
-  function getDividendsByTicker(ticker: string, year: number): number {
+  const getDividendsByTicker = (ticker: string, year: number): number => {
     const start_date = `${year}-01-01`;
     const end_date = `${year}-12-31`;
     const sql = `
@@ -144,7 +144,7 @@ export function useDividends() {
     `;
     const result = query(sql, [ticker, start_date, end_date]) as { total: number }[];
     return result[0]?.total || 0;
-  }
+  };
 
   return {
     dividends,

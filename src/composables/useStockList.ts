@@ -9,7 +9,7 @@ const stock_list = ref<Stock[]>([]);
 const is_loading = ref(false);
 
 export function useStockList() {
-  async function loadStockList(): Promise<Stock[]> {
+  const loadStockList = async (): Promise<Stock[]> => {
     if (stock_list.value.length > 0) {
       return stock_list.value;
     }
@@ -74,9 +74,9 @@ export function useStockList() {
 
     is_loading.value = false;
     return stock_list.value;
-  }
+  };
 
-  async function addStock(stock: Stock): Promise<void> {
+  const addStock = async (stock: Stock): Promise<void> => {
     if (!stock.ticker) return;
 
     const exists = stock_list.value.find(s => s.ticker === stock.ticker);
@@ -90,9 +90,9 @@ export function useStockList() {
       stock_list.value.push({ ticker: stock.ticker, name: stock.name || '' });
       stock_list.value.sort((a, b) => a.ticker.localeCompare(b.ticker));
     }
-  }
+  };
 
-  function searchStocks(query: string): Stock[] {
+  const searchStocks = (query: string): Stock[] => {
     if (!query || query.length < 1) return [];
 
     const q = query.toUpperCase();
@@ -113,7 +113,7 @@ export function useStockList() {
     });
 
     return results.slice(0, 15);
-  }
+  };
 
   return {
     stock_list,

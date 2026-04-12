@@ -22,7 +22,7 @@ export function usePortfolio() {
   const holdings = ref<Holding[]>([]);
   const prices = ref<PriceData>({});
 
-  function loadHoldings(): Holding[] {
+  const loadHoldings = (): Holding[] => {
     const sql = `
       SELECT
         ticker,
@@ -48,9 +48,9 @@ export function usePortfolio() {
     });
 
     return holdings.value;
-  }
+  };
 
-  function loadPrices(): PriceData {
+  const loadPrices = (): PriceData => {
     const stored = localStorage.getItem('stock_prices_cache');
     if (stored) {
       try {
@@ -69,15 +69,15 @@ export function usePortfolio() {
     });
 
     return prices.value;
-  }
+  };
 
-  function updatePrice(ticker: string, price: number): void {
+  const updatePrice = (ticker: string, price: number): void => {
     prices.value[ticker] = price;
     localStorage.setItem('stock_prices_cache', JSON.stringify(prices.value));
     loadHoldings();
-  }
+  };
 
-  function getRealizedGain(): number {
+  const getRealizedGain = (): number => {
     const sql = `
       SELECT
         ticker,
@@ -104,9 +104,9 @@ export function usePortfolio() {
 
     const result = query(sql) as { realized_gain: number }[];
     return result.reduce((sum, r) => sum + (r.realized_gain || 0), 0);
-  }
+  };
 
-  function getPortfolioSummary() {
+  const getPortfolioSummary = () => {
     loadHoldings();
     loadPrices();
 
@@ -126,7 +126,7 @@ export function usePortfolio() {
       total_gain: total_unrealized + realized_gain,
       realized_gain,
     };
-  }
+  };
 
   return {
     holdings,
