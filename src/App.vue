@@ -91,7 +91,7 @@ async function handleClearCache() {
     return;
   }
   localStorage.removeItem('annual_performance_cache');
-  localStorage.removeItem('stock_prices_cache');
+  localStorage.removeItem('curr_prices_cache');
   localStorage.removeItem('stock_list_cache');
   showSnackbar('快取已清除');
 }

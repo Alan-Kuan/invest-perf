@@ -6,52 +6,33 @@ export interface Holding {
   ticker: string;
   name: string;
   shares: number;
-  avg_cost: number;
   total_cost: number;
-  current_price?: number;
+  curr_price?: number;
+  total_value?: number;
   unrealized_gain?: number;
-  unrealized_gain_percent?: number;
+  unrealized_roi?: number;
 }
 
 interface PriceData {
   [ticker: string]: number;
 }
 
+export interface PortfolioSummary {
+  holdings: Holding[];
+  total_cost: number;
+  total_value: number;
+  realized_gain: number;
+  unrealized_gain: number;
+}
+
 export function usePortfolio() {
   const { query } = useDatabase();
   const holdings = ref<Holding[]>([]);
   const prices = ref<PriceData>({});
+  const realized_gain_cache = ref<number>(0);
 
-  const loadHoldings = (): Holding[] => {
-    const sql = `
-      SELECT
-        ticker,
-        name,
-        SUM(CASE WHEN type = 'buy' THEN shares ELSE -shares END) as shares,
-        SUM(CASE WHEN type = 'buy' THEN total + fee ELSE -(total - fee - tax) END) /
-          NULLIF(SUM(CASE WHEN type = 'buy' THEN shares ELSE -shares END), 0) as avg_cost,
-        SUM(CASE WHEN type = 'buy' THEN total + fee ELSE -(total - fee - tax) END) as total_cost
-      FROM transactions
-      GROUP BY ticker
-      HAVING shares > 0
-      ORDER BY ticker
-    `;
-
-    holdings.value = query(sql) as unknown as Holding[];
-
-    holdings.value.forEach(h => {
-      if (prices.value[h.ticker]) {
-        h.current_price = prices.value[h.ticker];
-        h.unrealized_gain = (h.current_price - h.avg_cost) * h.shares;
-        h.unrealized_gain_percent = (h.current_price / h.avg_cost - 1) * 100;
-      }
-    });
-
-    return holdings.value;
-  };
-
-  const loadPrices = (): PriceData => {
-    const stored = localStorage.getItem('stock_prices_cache');
+  const loadCurrPrices = (): PriceData => {
+    const stored = localStorage.getItem('curr_prices_cache');
     if (stored) {
       try {
         prices.value = JSON.parse(stored);
@@ -59,82 +40,81 @@ export function usePortfolio() {
         prices.value = {};
       }
     }
-
-    holdings.value.forEach(h => {
-      if (prices.value[h.ticker]) {
-        h.current_price = prices.value[h.ticker];
-        h.unrealized_gain = (h.current_price - h.avg_cost) * h.shares;
-        h.unrealized_gain_percent = (h.current_price / h.avg_cost - 1) * 100;
-      }
-    });
-
     return prices.value;
   };
 
-  const updatePrice = (ticker: string, price: number): void => {
-    prices.value[ticker] = price;
-    localStorage.setItem('stock_prices_cache', JSON.stringify(prices.value));
-    loadHoldings();
+  const updateCurrPricesCache = (new_prices: PriceData): void => {
+    prices.value = { ...prices.value, ...new_prices };
+    localStorage.setItem('curr_prices_cache', JSON.stringify(prices.value));
   };
 
-  const getRealizedGain = (): number => {
-    const sql = `
-      SELECT
+  const loadHoldings = () => {
+    const sql = `SELECT * FROM transactions ORDER BY date, id`;
+    const txs = query(sql) as any[];
+
+    const state: Record<string, { shares: number; cost: number; name: string }> = {};
+    let total_realized = 0;
+
+    for (const tx of txs) {
+      if (!state[tx.ticker]) {
+        state[tx.ticker] = { shares: 0, cost: 0, name: tx.name };
+      }
+      const h = state[tx.ticker];
+
+      if (tx.type === 'buy') {
+        h.shares += tx.shares;
+        h.cost += tx.net_amount;
+      } else if (tx.type === 'sell') {
+        const avg_cost = h.shares > 0 ? h.cost / h.shares : 0;
+        const cost_basis = tx.shares * avg_cost;
+        total_realized += tx.net_amount - cost_basis;
+        h.shares -= tx.shares;
+        h.cost -= cost_basis;
+      }
+    }
+
+    realized_gain_cache.value = total_realized;
+
+    holdings.value = Object.entries(state)
+      .filter(([_, h]) => h.shares > 0)
+      .map(([ticker, h]) => ({
         ticker,
-        SUM(CASE WHEN type = 'sell' THEN total - fee - tax ELSE 0 END) -
-        SUM(CASE WHEN type = 'sell' THEN shares * avg_cost ELSE 0 END) as realized_gain
-      FROM (
-        SELECT
-          t.ticker,
-          t.type,
-          t.total,
-          t.fee,
-          t.tax,
-          t.shares,
-          (SELECT SUM(CASE WHEN type = 'buy' THEN total + fee ELSE -(total - fee - tax) END) /
-                     NULLIF(SUM(CASE WHEN type = 'buy' THEN shares ELSE -shares END), 0)
-           FROM transactions t2
-           WHERE t2.ticker = t.ticker AND t2.date <= t.date AND t2.type = 'buy')
-           as avg_cost
-        FROM transactions t
-        WHERE type = 'sell'
-      )
-      GROUP BY ticker
-    `;
+        name: h.name,
+        shares: h.shares,
+        total_cost: h.cost,
+      }));
 
-    const result = query(sql) as { realized_gain: number }[];
-    return result.reduce((sum, r) => sum + (r.realized_gain || 0), 0);
+    for (const h of holdings.value) {
+      if (!prices.value[h.ticker]) continue;
+
+      const is_etf = h.ticker.startsWith('00');
+      const fee_rate = 0.001425;
+      const tax_rate = is_etf ? 0.001 : 0.003;
+
+      h.curr_price = prices.value[h.ticker];
+      h.total_value = h.curr_price * h.shares;
+      h.unrealized_gain = Math.round(h.total_value * (1 - fee_rate - tax_rate) - h.total_cost);
+      h.unrealized_roi = (h.unrealized_gain / h.total_cost) * 100;
+    }
   };
 
-  const getPortfolioSummary = () => {
+  const getPortfolioSummary = (): PortfolioSummary => {
+    loadCurrPrices();
     loadHoldings();
-    loadPrices();
-
-    const total_cost = holdings.value.reduce((sum, h) => sum + h.total_cost, 0);
-    const total_value = holdings.value.reduce(
-      (sum, h) => sum + (h.current_price || h.avg_cost) * h.shares,
-      0,
-    );
-    const total_unrealized = holdings.value.reduce((sum, h) => sum + (h.unrealized_gain || 0), 0);
-    const realized_gain = getRealizedGain();
 
     return {
       holdings: holdings.value,
-      total_cost,
-      total_value,
-      total_unrealized,
-      total_gain: total_unrealized + realized_gain,
-      realized_gain,
+      total_cost: holdings.value.reduce((sum, h) => sum + h.total_cost, 0),
+      total_value: holdings.value.reduce((sum, h) => sum + (h.total_value ?? 0), 0),
+      realized_gain: realized_gain_cache.value,
+      unrealized_gain: holdings.value.reduce((sum, h) => sum + (h.unrealized_gain ?? 0), 0),
     };
   };
 
   return {
     holdings,
     prices,
-    loadHoldings,
-    loadPrices,
-    updatePrice,
-    getRealizedGain,
+    updateCurrPricesCache,
     getPortfolioSummary,
   };
 }

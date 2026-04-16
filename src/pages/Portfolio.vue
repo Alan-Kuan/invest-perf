@@ -4,39 +4,63 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { Doughnut } from 'vue-chartjs';
 
 import { useDatabase } from '../composables/useDatabase';
-import { usePortfolio, type Holding } from '../composables/usePortfolio';
+import { usePortfolio, type PortfolioSummary } from '../composables/usePortfolio';
 import { useStockPrice } from '../composables/useStockPrice';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
-interface DistributionData {
-  ticker: string;
-  name: string;
-  value: number;
-}
-
 const { is_ready } = useDatabase();
-const { updatePrice, getPortfolioSummary } = usePortfolio();
+const { getPortfolioSummary, updateCurrPricesCache } = usePortfolio();
 const { fetchPricesBatch } = useStockPrice();
-
-interface PortfolioSummary {
-  holdings: Holding[];
-  total_cost: number;
-  total_value: number;
-  total_unrealized: number;
-}
 
 const summary = ref<PortfolioSummary>({
   holdings: [],
   total_cost: 0,
   total_value: 0,
-  total_unrealized: 0,
+  realized_gain: 0,
+  unrealized_gain: 0,
 });
 
 const is_loading_prices = ref(false);
 const last_update = ref<string | null>(null);
-const ticker_distribution = ref<DistributionData[]>([]);
 let price_update_interval: ReturnType<typeof setInterval> | null = null;
+
+const distribution_chart_options = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: {
+      position: 'right' as const,
+    },
+    tooltip: {
+      callbacks: {
+        label: (ctx: any) => {
+          const item = summary.value.holdings[ctx.dataIndex];
+          return `${item.name} (${item.ticker}): ${item.total_value?.toLocaleString()}`;
+        },
+      },
+    },
+  },
+};
+
+const distribution_chart_data = computed(() => ({
+  labels: summary.value.holdings.map(t => t.name),
+  datasets: [
+    {
+      data: summary.value.holdings.map(t => t.total_value || 0),
+      backgroundColor: [
+        '#00d9ff',
+        '#ff6b6b',
+        '#4ecdc4',
+        '#ffe66d',
+        '#95e1d3',
+        '#f38181',
+        '#aa96da',
+        '#fcbad3',
+      ],
+    },
+  ],
+}));
 
 function isMarketHours(): boolean {
   const now = new Date();
@@ -70,71 +94,6 @@ function stopPriceUpdateTimer() {
   }
 }
 
-function loadData() {
-  const data = getPortfolioSummary();
-  const holdings = data.holdings.filter(h => h.shares > 0);
-
-  const total_cost = holdings.reduce((sum, h) => sum + h.total_cost, 0);
-  const total_value = holdings.reduce(
-    (sum, h) => sum + (h.current_price || h.avg_cost) * h.shares,
-    0,
-  );
-  const total_unrealized = holdings.reduce((sum, h) => sum + (h.unrealized_gain || 0), 0);
-
-  summary.value = {
-    holdings,
-    total_cost: total_cost,
-    total_value: total_value,
-    total_unrealized: total_unrealized,
-  };
-  loadTickerDistribution();
-}
-
-function loadTickerDistribution() {
-  ticker_distribution.value = summary.value.holdings.map(h => ({
-    ticker: h.ticker,
-    name: h.name,
-    value: (h.current_price || h.avg_cost) * h.shares,
-  }));
-}
-
-const distribution_chart_data = computed(() => ({
-  labels: ticker_distribution.value.map(t => t.name),
-  datasets: [
-    {
-      data: ticker_distribution.value.map(t => t.value),
-      backgroundColor: [
-        '#00d9ff',
-        '#ff6b6b',
-        '#4ecdc4',
-        '#ffe66d',
-        '#95e1d3',
-        '#f38181',
-        '#aa96da',
-        '#fcbad3',
-      ],
-    },
-  ],
-}));
-
-const distribution_chart_options = {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: {
-    legend: {
-      position: 'right' as const,
-    },
-    tooltip: {
-      callbacks: {
-        label: (ctx: any) => {
-          const item = ticker_distribution.value[ctx.dataIndex];
-          return `${item.name} (${item.ticker}): ${item.value.toLocaleString()}`;
-        },
-      },
-    },
-  },
-};
-
 async function fetchAllPrices() {
   if (summary.value.holdings.length === 0) return;
 
@@ -144,11 +103,8 @@ async function fetchAllPrices() {
     const tickers = summary.value.holdings.map(h => h.ticker);
     const prices = await fetchPricesBatch(tickers);
 
-    for (const ticker of Object.keys(prices)) {
-      updatePrice(ticker, prices[ticker]);
-    }
-
-    loadData();
+    updateCurrPricesCache(prices);
+    summary.value = getPortfolioSummary();
     last_update.value = new Date().toLocaleTimeString();
   } finally {
     is_loading_prices.value = false;
@@ -157,13 +113,13 @@ async function fetchAllPrices() {
 
 watch(is_ready, ready => {
   if (ready) {
-    loadData();
+    summary.value = getPortfolioSummary();
   }
 });
 
 onMounted(() => {
   if (is_ready.value) {
-    loadData();
+    summary.value = getPortfolioSummary();
     if (isMarketHours()) {
       fetchAllPrices();
       startPriceUpdateTimer();
@@ -208,7 +164,7 @@ onUnmounted(() => {
       <v-col sm="6" md="4">
         <v-card class="rounded-lg h-full" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
           <v-card-text>
-            <div class="text-body-small text-grey">總市值</div>
+            <div class="text-body-small text-grey">總現值</div>
             <div class="text-body-large font-weight-bold">
               {{ summary.total_value.toLocaleString() }}
             </div>
@@ -218,13 +174,20 @@ onUnmounted(() => {
       <v-col sm="6" md="4">
         <v-card class="rounded-lg h-full" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
           <v-card-text>
-            <div class="text-body-small text-grey">未實現損益</div>
+            <div class="d-flex align-center text-body-small text-grey">
+              預估淨損益
+              <v-tooltip text="考慮手續費（0.1425%）與交易稅（股票：0.3%、ETF：0.1%)">
+                <template v-slot:activator="{ props }">
+                  <v-icon size="x-small" class="ml-1" v-bind="props">mdi-help-circle</v-icon>
+                </template>
+              </v-tooltip>
+            </div>
             <div
               class="text-body-large font-weight-bold"
-              :class="summary.total_unrealized >= 0 ? 'text-success' : 'text-error'"
+              :class="summary.unrealized_gain >= 0 ? 'text-success' : 'text-error'"
             >
-              {{ summary.total_unrealized >= 0 ? '+' : ''
-              }}{{ summary.total_unrealized.toLocaleString() }}
+              {{ summary.unrealized_gain >= 0 ? '+' : ''
+              }}{{ summary.unrealized_gain.toLocaleString() }}
             </div>
           </v-card-text>
         </v-card>
@@ -236,7 +199,7 @@ onUnmounted(() => {
       <v-card-text>
         <div style="height: 300px">
           <Doughnut
-            v-if="ticker_distribution.length > 0"
+            v-if="summary.holdings.length > 0"
             :data="distribution_chart_data"
             :options="distribution_chart_options"
           />
@@ -254,12 +217,30 @@ onUnmounted(() => {
               <th class="text-left font-semibold text-grey-darken-1">商品代號</th>
               <th class="text-left font-semibold text-grey-darken-1">商品名稱</th>
               <th class="text-right font-semibold text-grey-darken-1">持有股數</th>
-              <th class="text-right font-semibold text-grey-darken-1">平均成本</th>
+              <th class="text-right font-semibold text-grey-darken-1 position-relative">
+                <div class="d-flex align-center justify-end">
+                  平均成本
+                  <v-tooltip text="考慮手續費的每股平均成本">
+                    <template v-slot:activator="{ props }">
+                      <v-icon size="x-small" class="ml-1" v-bind="props">mdi-help-circle</v-icon>
+                    </template>
+                  </v-tooltip>
+                </div>
+              </th>
               <th class="text-right font-semibold text-grey-darken-1">總成本</th>
               <th class="text-right font-semibold text-grey-darken-1">現價</th>
-              <th class="text-right font-semibold text-grey-darken-1">市値</th>
-              <th class="text-right font-semibold text-grey-darken-1">未實現損益</th>
-              <th class="text-right font-semibold text-grey-darken-1">報酬率</th>
+              <th class="text-right font-semibold text-grey-darken-1">現值</th>
+              <th class="text-right font-semibold text-grey-darken-1">
+                <div class="d-flex align-center justify-end">
+                  預估淨損益
+                  <v-tooltip text="考慮手續費（0.1425%）與交易稅（股票：0.3%、ETF：0.1%)">
+                    <template v-slot:activator="{ props }">
+                      <v-icon size="x-small" class="ml-1" v-bind="props">mdi-help-circle</v-icon>
+                    </template>
+                  </v-tooltip>
+                </div>
+              </th>
+              <th class="text-right font-semibold text-grey-darken-1">預估報酬率</th>
             </tr>
           </thead>
           <tbody>
@@ -267,11 +248,11 @@ onUnmounted(() => {
               <td class="font-weight-bold">{{ h.ticker }}</td>
               <td>{{ h.name || '-' }}</td>
               <td class="text-right">{{ h.shares.toLocaleString() }}</td>
-              <td class="text-right">{{ h.avg_cost?.toLocaleString() }}</td>
-              <td class="text-right">{{ h.total_cost?.toLocaleString() }}</td>
-              <td class="text-right">{{ h.current_price?.toLocaleString() || '-' }}</td>
+              <td class="text-right">{{ (h.total_cost / h.shares).toLocaleString() }}</td>
+              <td class="text-right">{{ h.total_cost.toLocaleString() }}</td>
+              <td class="text-right">{{ h.curr_price?.toLocaleString() || '-' }}</td>
               <td class="text-right">
-                {{ ((h.current_price || h.avg_cost) * h.shares).toLocaleString() }}
+                {{ h.total_value?.toLocaleString() }}
               </td>
               <td
                 class="text-right"
@@ -282,10 +263,10 @@ onUnmounted(() => {
               </td>
               <td
                 class="text-right"
-                :class="(h.unrealized_gain_percent || 0) >= 0 ? 'text-success' : 'text-error'"
+                :class="(h.unrealized_roi || 0) >= 0 ? 'text-success' : 'text-error'"
               >
-                {{ (h.unrealized_gain_percent || 0) >= 0 ? '+' : ''
-                }}{{ (h.unrealized_gain_percent || 0).toFixed(2) }}%
+                {{ (h.unrealized_roi || 0) >= 0 ? '+' : ''
+                }}{{ (h.unrealized_roi || 0).toFixed(2) }}%
               </td>
             </tr>
             <tr v-if="summary.holdings.length === 0">

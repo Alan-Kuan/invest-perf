@@ -36,7 +36,7 @@ ChartJS.register(
 const { is_ready, query } = useDatabase();
 const { transactions, loadTransactions } = useTransactions();
 const { dividends, loadDividends, getDividendsByTicker } = useDividends();
-const { getPortfolioSummary, getRealizedGain } = usePortfolio();
+const { getPortfolioSummary } = usePortfolio();
 const { fetchHistoricalPrice } = useStockPrice();
 
 const is_loading = ref(false);
@@ -79,11 +79,11 @@ async function loadStats() {
 
   const summary = getPortfolioSummary();
 
-  stats.value.realized_gain = getRealizedGain();
-  stats.value.unrealized_gain = summary.total_unrealized;
+  stats.value.realized_gain = summary.realized_gain;
+  stats.value.unrealized_gain = summary.unrealized_gain;
   stats.value.total_dividend = dividends.value.reduce((sum, d) => sum + d.amount, 0);
   stats.value.total_return =
-    stats.value.realized_gain + stats.value.total_dividend + summary.total_unrealized;
+    summary.realized_gain + stats.value.total_dividend + summary.unrealized_gain;
   stats.value.buy_count = transactions.value.filter(t => t.type === 'buy').length;
   stats.value.sell_count = transactions.value.filter(t => t.type === 'sell').length;
 
