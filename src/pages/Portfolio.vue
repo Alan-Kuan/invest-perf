@@ -25,6 +25,11 @@ const is_loading_prices = ref(false);
 const last_update = ref<string | null>(null);
 let price_update_interval: ReturnType<typeof setInterval> | null = null;
 
+const portfolio_roi = computed(() => {
+  if (summary.value.total_cost <= 0) return null;
+  return (summary.value.unrealized_gain / summary.value.total_cost) * 100;
+});
+
 const distribution_chart_options = {
   responsive: true,
   maintainAspectRatio: false,
@@ -151,7 +156,7 @@ onUnmounted(() => {
     </div>
 
     <v-row class="mb-4" align="stretch">
-      <v-col sm="6" md="4">
+      <v-col sm="6" md="3">
         <v-card class="rounded-lg h-full" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
           <v-card-text>
             <div class="text-body-small text-grey">總成本</div>
@@ -161,7 +166,7 @@ onUnmounted(() => {
           </v-card-text>
         </v-card>
       </v-col>
-      <v-col sm="6" md="4">
+      <v-col sm="6" md="3">
         <v-card class="rounded-lg h-full" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
           <v-card-text>
             <div class="text-body-small text-grey">總現值</div>
@@ -171,7 +176,7 @@ onUnmounted(() => {
           </v-card-text>
         </v-card>
       </v-col>
-      <v-col sm="6" md="4">
+      <v-col sm="6" md="3">
         <v-card class="rounded-lg h-full" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
           <v-card-text>
             <div class="d-flex align-center text-body-small text-grey">
@@ -189,6 +194,21 @@ onUnmounted(() => {
               {{ summary.unrealized_gain >= 0 ? '+' : ''
               }}{{ summary.unrealized_gain.toLocaleString() }}
             </div>
+          </v-card-text>
+        </v-card>
+      </v-col>
+      <v-col sm="6" md="3">
+        <v-card class="rounded-lg h-full" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
+          <v-card-text>
+            <div class="text-body-small text-grey">預估報酬率</div>
+            <div
+              v-if="portfolio_roi !== null"
+              class="text-body-large font-weight-bold"
+              :class="portfolio_roi >= 0 ? 'text-success' : 'text-error'"
+            >
+              {{ portfolio_roi >= 0 ? '+' : '' }}{{ portfolio_roi.toFixed(2) }}%
+            </div>
+            <div v-else class="text-body-large font-weight-bold text-grey">-</div>
           </v-card-text>
         </v-card>
       </v-col>
