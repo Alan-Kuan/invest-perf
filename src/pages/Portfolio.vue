@@ -139,10 +139,10 @@ onUnmounted(() => {
 
 <template>
   <div>
-    <div class="d-flex justify-space-between align-center mb-4">
-      <h2 class="text-headline-small">投資組合</h2>
-      <div class="d-flex align-center">
-        <span v-if="last_update" class="text-grey mr-4">更新時間: {{ last_update }}</span>
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-2xl">投資組合</h2>
+      <div class="flex items-center">
+        <span v-if="last_update" class="text-neutral-400 mr-4">更新時間: {{ last_update }}</span>
         <v-btn
           variant="tonal"
           size="small"
@@ -157,29 +157,29 @@ onUnmounted(() => {
 
     <v-row class="mb-4" align="stretch">
       <v-col sm="6" md="3">
-        <v-card class="rounded-lg h-full" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
+        <v-card class="rounded-lg h-full shadow-[0_2px_8px_rgba(0,0,0,0.08)]">
           <v-card-text>
-            <div class="text-body-small text-grey">總成本</div>
-            <div class="text-body-large font-weight-bold">
+            <div class="text-neutral-400">總成本</div>
+            <div class="font-bold text-base">
               {{ summary.total_cost.toLocaleString() }}
             </div>
           </v-card-text>
         </v-card>
       </v-col>
       <v-col sm="6" md="3">
-        <v-card class="rounded-lg h-full" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
+        <v-card class="rounded-lg h-full shadow-[0_2px_8px_rgba(0,0,0,0.08)]">
           <v-card-text>
-            <div class="text-body-small text-grey">總現值</div>
-            <div class="text-body-large font-weight-bold">
+            <div class="text-neutral-400">總現值</div>
+            <div class="font-bold text-base">
               {{ summary.total_value.toLocaleString() }}
             </div>
           </v-card-text>
         </v-card>
       </v-col>
       <v-col sm="6" md="3">
-        <v-card class="rounded-lg h-full" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
+        <v-card class="rounded-lg h-full shadow-[0_2px_8px_rgba(0,0,0,0.08)]">
           <v-card-text>
-            <div class="d-flex align-center text-body-small text-grey">
+            <div class="flex items-center text-neutral-400">
               預估淨損益
               <v-tooltip text="考慮手續費（0.1425%）與交易稅（股票：0.3%、ETF：0.1%)">
                 <template v-slot:activator="{ props }">
@@ -188,7 +188,7 @@ onUnmounted(() => {
               </v-tooltip>
             </div>
             <div
-              class="text-body-large font-weight-bold"
+              class="font-bold text-base"
               :class="summary.unrealized_gain >= 0 ? 'text-success' : 'text-error'"
             >
               {{ summary.unrealized_gain >= 0 ? '+' : ''
@@ -198,24 +198,24 @@ onUnmounted(() => {
         </v-card>
       </v-col>
       <v-col sm="6" md="3">
-        <v-card class="rounded-lg h-full" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
+        <v-card class="rounded-lg h-full shadow-[0_2px_8px_rgba(0,0,0,0.08)]">
           <v-card-text>
-            <div class="text-body-small text-grey">預估報酬率</div>
+            <div class="text-neutral-400">預估報酬率</div>
             <div
               v-if="portfolio_roi !== null"
-              class="text-body-large font-weight-bold"
+              class="font-bold text-base"
               :class="portfolio_roi >= 0 ? 'text-success' : 'text-error'"
             >
               {{ portfolio_roi >= 0 ? '+' : '' }}{{ portfolio_roi.toFixed(2) }}%
             </div>
-            <div v-else class="text-body-large font-weight-bold text-grey">-</div>
+            <div v-else class="font-bold text-base text-neutral-400">-</div>
           </v-card-text>
         </v-card>
       </v-col>
     </v-row>
 
-    <v-card class="mb-4 rounded-lg" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
-      <v-card-item class="text-base font-semibold pb-2">資產配置</v-card-item>
+    <v-card class="mb-4 rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.08)]">
+      <v-card-item class="font-medium pb-2">資產配置</v-card-item>
       <v-card-text>
         <div style="height: 300px">
           <Doughnut
@@ -223,22 +223,24 @@ onUnmounted(() => {
             :data="distribution_chart_data"
             :options="distribution_chart_options"
           />
-          <div v-else class="d-flex align-center justify-center h-100 text-grey">尚無資料</div>
+          <div v-else class="flex items-center justify-center h-full text-neutral-400">
+            尚無資料
+          </div>
         </div>
       </v-card-text>
     </v-card>
 
-    <v-card class="rounded-lg" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
-      <v-card-item class="text-base font-semibold pb-2">持有部位</v-card-item>
+    <v-card class="rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.08)]">
+      <v-card-item class="font-medium pb-2">持有部位</v-card-item>
       <v-card-text>
         <v-table>
           <thead>
-            <tr class="bg-grey-lighten-4">
-              <th class="text-left font-semibold text-grey-darken-1">商品代號</th>
-              <th class="text-left font-semibold text-grey-darken-1">商品名稱</th>
-              <th class="text-right font-semibold text-grey-darken-1">持有股數</th>
-              <th class="text-right font-semibold text-grey-darken-1 position-relative">
-                <div class="d-flex align-center justify-end">
+            <tr class="bg-neutral-100">
+              <th class="text-left font-medium text-neutral-500">商品代號</th>
+              <th class="text-left font-medium text-neutral-500">商品名稱</th>
+              <th class="text-right font-medium text-neutral-500">持有股數</th>
+              <th class="text-right font-medium text-neutral-500 relative">
+                <div class="flex items-center justify-end">
                   平均成本
                   <v-tooltip text="考慮手續費的每股平均成本">
                     <template v-slot:activator="{ props }">
@@ -247,11 +249,11 @@ onUnmounted(() => {
                   </v-tooltip>
                 </div>
               </th>
-              <th class="text-right font-semibold text-grey-darken-1">總成本</th>
-              <th class="text-right font-semibold text-grey-darken-1">現價</th>
-              <th class="text-right font-semibold text-grey-darken-1">現值</th>
-              <th class="text-right font-semibold text-grey-darken-1">
-                <div class="d-flex align-center justify-end">
+              <th class="text-right font-medium text-neutral-500">總成本</th>
+              <th class="text-right font-medium text-neutral-500">現價</th>
+              <th class="text-right font-medium text-neutral-500">現值</th>
+              <th class="text-right font-medium text-neutral-500">
+                <div class="flex items-center justify-end">
                   預估淨損益
                   <v-tooltip text="考慮手續費（0.1425%）與交易稅（股票：0.3%、ETF：0.1%)">
                     <template v-slot:activator="{ props }">
@@ -260,12 +262,12 @@ onUnmounted(() => {
                   </v-tooltip>
                 </div>
               </th>
-              <th class="text-right font-semibold text-grey-darken-1">預估報酬率</th>
+              <th class="text-right font-medium text-neutral-500">預估報酬率</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="h in summary.holdings" :key="h.ticker">
-              <td class="font-weight-bold">{{ h.ticker }}</td>
+              <td class="font-bold">{{ h.ticker }}</td>
               <td>{{ h.name || '-' }}</td>
               <td class="text-right">{{ h.shares.toLocaleString() }}</td>
               <td class="text-right">{{ (h.total_cost / h.shares).toLocaleString() }}</td>
@@ -290,11 +292,11 @@ onUnmounted(() => {
               </td>
             </tr>
             <tr v-if="summary.holdings.length === 0">
-              <td colspan="9" class="text-center text-grey pa-4">尚無持有部位</td>
+              <td colspan="9" class="text-center text-neutral-400 pa-4">尚無持有部位</td>
             </tr>
           </tbody>
         </v-table>
-        <div class="text-body-small text-grey mt-2">* 系統會自動抓取 TWSE 即時報價</div>
+        <div class="text-sm text-neutral-400 mt-2">* 系統會自動抓取 TWSE 即時報價</div>
       </v-card-text>
     </v-card>
   </div>

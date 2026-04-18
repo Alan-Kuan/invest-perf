@@ -1,42 +1,30 @@
-import '../styles/layer.css'; // this file should be imported before vuetify/styles
-import 'vuetify/styles';
 import { createVuetify } from 'vuetify';
-import * as components from 'vuetify/components';
-import * as directives from 'vuetify/directives';
 
-export const vuetify = createVuetify({
-  components,
-  directives,
+import { forVuetify } from '../theme/breakpoints';
+
+import '@mdi/font/css/materialdesignicons.css';
+import 'vuetify/styles';
+
+const custom_theme = {
+  dark: false,
+  colors: {
+    primary: '#2196f3',
+    secondary: '#1a1a2e',
+    accent: '#40c4ff',
+    success: '#4caf50',
+    error: '#f44336',
+  },
+};
+
+export default createVuetify({
   theme: {
-    defaultTheme: 'light',
+    defaultTheme: 'custom_theme',
     themes: {
-      light: {
-        colors: {
-          primary: '#57c4f2',
-          secondary: '#16213e',
-          accent: '#00d9ff',
-          error: '#f44336',
-          warning: '#ff9800',
-          info: '#2196f3',
-          success: '#4caf50',
-        },
-      },
+      custom_theme,
     },
   },
-  defaults: {
-    VCard: {
-      variant: 'flat',
-    },
-    VBtn: {
-      variant: 'flat',
-    },
-    VTextField: {
-      variant: 'outlined',
-      density: 'comfortable',
-    },
-    VSelect: {
-      variant: 'outlined',
-      density: 'comfortable',
-    },
+  display: {
+    mobileBreakpoint: 'md',
+    thresholds: forVuetify,
   },
 });

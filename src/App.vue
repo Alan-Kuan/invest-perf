@@ -99,13 +99,13 @@ async function handleClearCache() {
 
 <template>
   <v-app>
-    <v-navigation-drawer app color="#1a1a2e">
+    <v-navigation-drawer app color="secondary">
       <div class="pa-4">
-        <div class="text-title-large text-accent font-weight-bold mb-4">投資績效</div>
+        <div class="text-xl text-accent font-bold mb-4">投資績效</div>
 
         <v-divider class="mb-4" />
 
-        <v-list nav>
+        <v-list nav bg-color="secondary">
           <v-list-item
             to="/"
             prepend-icon="mdi-swap-horizontal"
@@ -140,8 +140,8 @@ async function handleClearCache() {
       <template #append>
         <div class="pa-4">
           <v-divider class="mb-4" />
-          <div class="text-body-small text-grey mb-2">資料管理</div>
-          <v-list nav density="compact">
+          <div class="text-sm text-neutral-300 mb-2">資料管理</div>
+          <v-list nav density="compact" bg-color="secondary">
             <v-list-item
               @click="handleExport"
               prepend-icon="mdi-download"
@@ -187,7 +187,7 @@ async function handleClearCache() {
     </v-navigation-drawer>
 
     <v-main>
-      <v-container class="pa-6">
+      <v-container class="pa-6 max-w-90%">
         <router-view />
       </v-container>
     </v-main>

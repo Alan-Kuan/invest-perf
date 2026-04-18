@@ -4,11 +4,20 @@ import vue from '@vitejs/plugin-vue';
 import UnoCSS from 'unocss/vite';
 import { defineConfig } from 'vite';
 import { viteStaticCopy } from 'vite-plugin-static-copy';
+import Vuetify, { transformAssetUrls } from 'vite-plugin-vuetify';
 
 export default defineConfig({
   plugins: [
-    vue(),
+    vue({
+      template: { transformAssetUrls },
+    }),
     UnoCSS(),
+    Vuetify({
+      autoImport: true,
+      styles: {
+        configFile: 'src/styles/settings.scss',
+      },
+    }),
     viteStaticCopy({
       targets: [
         {

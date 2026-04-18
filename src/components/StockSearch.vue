@@ -152,20 +152,20 @@ onMounted(async () => {
         <v-list-item
           v-for="(stock, index) in results"
           :key="stock.ticker"
-          :class="{ 'bg-grey-lighten-3 highlighted': index === highlighted_index }"
+          :class="{ 'bg-neutral-100 highlighted': index === highlighted_index }"
           @click="selectStock(stock)"
           @mouseenter="highlighted_index = index"
         >
           <v-list-item-title>
-            <span class="font-weight-bold mr-2">{{ stock.ticker }}</span>
-            <span class="text-grey">{{ stock.name }}</span>
+            <span class="font-bold mr-2">{{ stock.ticker }}</span>
+            <span class="text-neutral-400">{{ stock.name }}</span>
           </v-list-item-title>
         </v-list-item>
       </v-list>
     </v-card>
 
     <v-card v-else-if="search_query && search_query.length >= 1 && !is_loading" min-width="300">
-      <v-list-item class="text-grey"> 找不到 "{{ search_query }}" </v-list-item>
+      <v-list-item class="text-neutral-400"> 找不到 "{{ search_query }}" </v-list-item>
     </v-card>
   </v-menu>
 </template>

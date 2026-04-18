@@ -300,8 +300,8 @@ onMounted(() => {
 
 <template>
   <div>
-    <div class="d-flex align-center mb-4">
-      <h2 class="text-headline-small">交易紀錄</h2>
+    <div class="flex items-center mb-4">
+      <h2 class="text-2xl">交易紀錄</h2>
       <v-btn
         class="ml-auto"
         variant="tonal"
@@ -313,8 +313,8 @@ onMounted(() => {
       </v-btn>
     </div>
 
-    <v-card class="mb-4 rounded-lg" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
-      <v-card-item class="text-base font-semibold pb-2">新增交易</v-card-item>
+    <v-card class="mb-4 rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.08)]">
+      <v-card-item class="font-medium pb-2">新增交易</v-card-item>
       <v-card-text>
         <v-form @submit.prevent="submitForm">
           <v-row>
@@ -372,7 +372,7 @@ onMounted(() => {
                 hide-spin-buttons
               >
                 <template #append-inner>
-                  <div class="d-flex">
+                  <div class="flex">
                     <v-btn size="small" color="success" variant="text" @click="adjustShares(1000)"
                       >+1K</v-btn
                     >
@@ -435,18 +435,18 @@ onMounted(() => {
           </v-row>
 
           <v-row>
-            <v-col class="d-flex justify-end align-center">
-              <div class="d-flex align-baseline mr-6">
-                <div class="mr-2 text-grey text-body-large">淨收付</div>
+            <v-col class="flex justify-end items-center">
+              <div class="flex items-baseline mr-6">
+                <div class="mr-2 text-neutral-400 text-lg">淨收付</div>
                 <div
                   :class="
                     computed_net_amount === 0
-                      ? 'text-grey'
+                      ? 'text-neutral-400'
                       : form.type === 'buy'
                         ? 'text-error'
                         : 'text-success'
                   "
-                  class="text-body-extra-large font-weight-bold"
+                  class="text-xl font-bold"
                 >
                   {{ computed_net_amount === 0 ? '$' : form.type === 'buy' ? '-$' : '+$'
                   }}{{ computed_net_amount.toLocaleString() }}
@@ -460,8 +460,8 @@ onMounted(() => {
       </v-card-text>
     </v-card>
 
-    <v-card class="rounded-lg" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
-      <v-card-item class="text-base font-semibold pb-2">交易歷史</v-card-item>
+    <v-card class="rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.08)]">
+      <v-card-item class="font-medium pb-2">交易歷史</v-card-item>
       <v-card-text>
         <v-row class="mb-4" align="center">
           <v-col cols="12" sm="6" md="3">
@@ -534,7 +534,7 @@ onMounted(() => {
           <v-col cols="12" sm="6" md="2">
             <v-btn variant="outlined" @click="clearFilters">清除</v-btn>
           </v-col>
-          <v-col cols="12" sm="6" md="4" class="d-flex">
+          <v-col cols="12" sm="6" md="4" class="flex">
             <v-btn color="success" variant="outlined" @click="exportCsv" class="mr-2"
               >匯出 CSV</v-btn
             >
@@ -553,28 +553,28 @@ onMounted(() => {
 
         <v-table>
           <thead>
-            <tr class="bg-grey-lighten-4">
-              <th class="text-left font-semibold text-grey-darken-1">成交日期</th>
-              <th class="text-left font-semibold text-grey-darken-1">商品</th>
-              <th class="text-center font-semibold text-grey-darken-1">交易別</th>
-              <th class="text-right font-semibold text-grey-darken-1">股數</th>
-              <th class="text-right font-semibold text-grey-darken-1">單價</th>
-              <th class="text-right font-semibold text-grey-darken-1">價金</th>
-              <th class="text-right font-semibold text-grey-darken-1">手續費</th>
-              <th class="text-right font-semibold text-grey-darken-1">交易稅</th>
-              <th class="text-right font-semibold text-grey-darken-1">淨收付</th>
-              <th class="text-center font-semibold text-grey-darken-1">操作</th>
+            <tr class="bg-neutral-100">
+              <th class="text-left font-medium text-neutral-500">成交日期</th>
+              <th class="text-left font-medium text-neutral-500">商品</th>
+              <th class="text-center font-medium text-neutral-500">交易別</th>
+              <th class="text-right font-medium text-neutral-500">股數</th>
+              <th class="text-right font-medium text-neutral-500">單價</th>
+              <th class="text-right font-medium text-neutral-500">價金</th>
+              <th class="text-right font-medium text-neutral-500">手續費</th>
+              <th class="text-right font-medium text-neutral-500">交易稅</th>
+              <th class="text-right font-medium text-neutral-500">淨收付</th>
+              <th class="text-center font-medium text-neutral-500">操作</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="t in transactions" :key="t.id">
               <td>{{ formatDate(t.date) }}</td>
               <td>
-                <div class="font-weight-bold">{{ t.ticker }}</div>
-                <div class="text-body-small text-grey">{{ t.name }}</div>
+                <div class="font-bold">{{ t.ticker }}</div>
+                <div class="text-sm text-neutral-400">{{ t.name }}</div>
               </td>
               <td class="text-center">
-                <v-chip :color="t.type === 'buy' ? 'info' : 'error'" size="small" class="text-xs">
+                <v-chip :color="t.type === 'buy' ? 'info' : 'error'" size="small" class="text-sm">
                   {{ t.type === 'buy' ? '買進' : '賣出' }}
                 </v-chip>
               </td>
@@ -587,7 +587,7 @@ onMounted(() => {
                 class="text-right"
                 :class="
                   t.net_amount === 0
-                    ? 'text-grey'
+                    ? 'text-neutral-400'
                     : t.type === 'buy'
                       ? 'text-error'
                       : 'text-success'
@@ -603,7 +603,7 @@ onMounted(() => {
               </td>
             </tr>
             <tr v-if="transactions.length === 0">
-              <td colspan="10" class="text-center text-grey pa-4">尚無交易紀錄</td>
+              <td colspan="10" class="text-center text-neutral-400 pa-4">尚無交易紀錄</td>
             </tr>
           </tbody>
         </v-table>

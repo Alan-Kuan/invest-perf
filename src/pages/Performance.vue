@@ -404,8 +404,8 @@ onMounted(() => {
 
 <template>
   <div>
-    <div class="d-flex align-center mb-4">
-      <h2 class="text-headline-small">投資績效</h2>
+    <div class="flex items-center mb-4">
+      <h2 class="text-2xl">投資績效</h2>
       <v-btn
         class="ml-auto"
         variant="tonal"
@@ -418,22 +418,22 @@ onMounted(() => {
     </div>
 
     <v-row class="mb-4" align="stretch">
-      <v-col v-for="i in 5" :key="i" sm="6" md="4" lg="2" class="d-flex align-stretch">
-        <v-card class="rounded-lg w-100" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
-          <v-card-text class="h-100">
+      <v-col v-for="i in 5" :key="i" sm="6" md="4" lg="2" class="flex items-stretch">
+        <v-card class="rounded-lg w-full shadow-[0_2px_8px_rgba(0,0,0,0.08)]">
+          <v-card-text class="h-full">
             <template v-if="i === 1">
-              <div class="text-body-small text-grey">已實現損益</div>
+              <div class="text-neutral-400">已實現損益</div>
               <div
-                class="text-body-large font-weight-bold"
+                class="font-bold text-base"
                 :class="stats.realized_gain >= 0 ? 'text-success' : 'text-error'"
               >
                 {{ stats.realized_gain >= 0 ? '+' : '' }}{{ stats.realized_gain.toLocaleString() }}
               </div>
             </template>
             <template v-else-if="i === 2">
-              <div class="text-body-small text-grey">未實現損益</div>
+              <div class="text-neutral-400">未實現損益</div>
               <div
-                class="text-body-large font-weight-bold"
+                class="font-bold text-base"
                 :class="stats.unrealized_gain >= 0 ? 'text-success' : 'text-error'"
               >
                 {{ stats.unrealized_gain >= 0 ? '+' : ''
@@ -441,26 +441,26 @@ onMounted(() => {
               </div>
             </template>
             <template v-else-if="i === 3">
-              <div class="text-body-small text-grey">股利收入</div>
-              <div class="text-body-large font-weight-bold text-success">
+              <div class="text-neutral-400">股利收入</div>
+              <div class="font-bold text-base text-success">
                 {{ stats.total_dividend.toLocaleString() }}
               </div>
             </template>
             <template v-else-if="i === 4">
-              <div class="text-body-small text-grey">總損益</div>
+              <div class="text-neutral-400">總損益</div>
               <div
-                class="text-body-large font-weight-bold"
+                class="font-bold text-base"
                 :class="stats.total_return >= 0 ? 'text-success' : 'text-error'"
               >
                 {{ stats.total_return >= 0 ? '+' : '' }}{{ stats.total_return.toLocaleString() }}
               </div>
             </template>
             <template v-else-if="i === 5">
-              <div class="text-body-small text-grey">交易次數</div>
-              <div class="text-body-large font-weight-bold">
+              <div class="text-neutral-400">交易次數</div>
+              <div class="font-bold text-base">
                 {{ stats.buy_count + stats.sell_count }}
               </div>
-              <div class="text-body-small text-grey">
+              <div class="text-sm text-neutral-400">
                 {{ stats.buy_count }} 買 / {{ stats.sell_count }} 賣
               </div>
             </template>
@@ -471,20 +471,20 @@ onMounted(() => {
 
     <v-row>
       <v-col cols="12" md="6">
-        <v-card class="mb-4 rounded-lg" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
+        <v-card class="mb-4 rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.08)]">
           <v-card-item>
-            <div class="d-flex align-center">
-              <span class="text-base font-semibold">年度報酬率</span>
+            <div class="flex items-center">
+              <span class="font-medium">年度報酬率</span>
               <v-tooltip origin="start center" transition="scale-transition">
                 <template v-slot:activator="{ props }">
-                  <v-icon v-bind="props" size="small" class="ml-1" color="grey">
+                  <v-icon v-bind="props" size="small" class="ml-1" color="neutral-400">
                     mdi-help-circle-outline
                   </v-icon>
                 </template>
-                <ul class="pa-0 ml-4">
+                <ul class="px-4 py-2 list-disc">
                   <li>
                     <span
-                      class="text-body-small"
+                      class="text-xs"
                       v-html="
                         katex.renderToString(
                           '\\text{已實現報酬成本} = \\sum (\\text{買入均價} \\times \\text{賣出股數} - \\text{實發股利} \\times \\dfrac{\\text{賣出股數}}{\\text{總初始股數}})',
@@ -495,7 +495,7 @@ onMounted(() => {
                   </li>
                   <li class="mt-2">
                     <span
-                      class="text-body-small"
+                      class="text-xs"
                       v-html="
                         katex.renderToString(
                           '\\text{未實現報酬成本} = \\sum (\\text{買入均價} \\times \\text{剩餘股數} - \\text{實發股利} \\times \\dfrac{\\text{剩餘股數}}{\\text{總初始股數}})',
@@ -506,7 +506,7 @@ onMounted(() => {
                   </li>
                   <li class="mt-2">
                     <span
-                      class="text-body-small"
+                      class="text-xs"
                       v-html="
                         katex.renderToString(
                           '\\text{已實現報酬率} = \\dfrac{\\sum (\\text{賣出價} \\times \\text{賣出股數}) - \\text{已實現報酬成本}}{\\text{已實現報酬成本}} \\times 100\\%',
@@ -517,7 +517,7 @@ onMounted(() => {
                   </li>
                   <li class="mt-2">
                     <span
-                      class="text-body-small"
+                      class="text-xs"
                       v-html="
                         katex.renderToString(
                           '\\text{未實現報酬率} = \\dfrac{\\sum (\\text{期末收盤價} \\times \\text{賣出股數}) - \\text{未實現報酬成本}}{\\text{未實現報酬成本}} \\times 100\\%',
@@ -528,7 +528,7 @@ onMounted(() => {
                   </li>
                   <li class="mt-2">
                     <span
-                      class="text-body-small"
+                      class="text-xs"
                       v-html="
                         katex.renderToString(
                           '\\text{總報酬率} = \\text{已實現報酬率} \\times \\dfrac{\\text{賣出股數}}{\\text{總初始股數}} + \\text{未實現報酬率} \\times \\dfrac{\\text{剩餘股數}}{\\text{總初始股數}}',
@@ -552,24 +552,26 @@ onMounted(() => {
                 :data="performance_chart_data"
                 :options="performance_chart_options"
               />
-              <div v-else class="d-flex align-center justify-center h-100 text-grey">尚無資料</div>
+              <div v-else class="flex items-center justify-center h-full text-neutral-400">
+                尚無資料
+              </div>
             </div>
           </v-card-text>
         </v-card>
       </v-col>
 
       <v-col cols="12" md="6">
-        <v-card class="mb-4 rounded-lg" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
+        <v-card class="mb-4 rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.08)]">
           <v-card-item>
-            <div class="d-flex align-center">
-              <span class="text-base font-semibold">年度累積損益</span>
+            <div class="flex items-center">
+              <span class="font-medium">年度累積損益</span>
               <v-tooltip origin="start center" transition="scale-transition">
                 <template v-slot:activator="{ props }">
-                  <v-icon v-bind="props" size="small" class="ml-1" color="grey">
+                  <v-icon v-bind="props" size="small" class="ml-1" color="neutral-400">
                     mdi-help-circle-outline
                   </v-icon>
                 </template>
-                <span class="text-body-small">從第一年到該年的累積損益金額</span>
+                <span class="text-sm">從第一年到該年的累積損益金額</span>
               </v-tooltip>
             </div>
           </v-card-item>
@@ -581,7 +583,9 @@ onMounted(() => {
                 :data="cumulative_chart_data"
                 :options="cumulative_chart_options"
               />
-              <div v-else class="d-flex align-center justify-center h-100 text-grey">尚無資料</div>
+              <div v-else class="flex items-center justify-center h-full text-neutral-400">
+                尚無資料
+              </div>
             </div>
           </v-card-text>
         </v-card>

@@ -247,10 +247,10 @@ onMounted(() => {
 
 <template>
   <div>
-    <h2 class="text-headline-small mb-4">股利紀錄</h2>
+    <h2 class="text-2xl mb-4">股利紀錄</h2>
 
-    <v-card class="mb-4 rounded-lg" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
-      <v-card-item class="text-base font-semibold pb-2">新增股利</v-card-item>
+    <v-card class="mb-4 rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.08)]">
+      <v-card-item class="font-medium pb-2">新增股利</v-card-item>
       <v-card-text>
         <v-form @submit.prevent="submitForm">
           <v-row>
@@ -328,12 +328,12 @@ onMounted(() => {
               />
             </v-col>
 
-            <v-col class="d-flex justify-end align-center">
-              <div class="d-flex align-baseline mr-6">
-                <div class="mr-2 text-grey text-body-large">實發股利</div>
+            <v-col class="flex justify-end items-center">
+              <div class="flex items-baseline mr-6">
+                <div class="mr-2 text-neutral-400 text-lg">實發股利</div>
                 <div
-                  :class="computed_amount === 0 ? 'text-grey' : 'text-success'"
-                  class="text-body-extra-large font-weight-bold"
+                  :class="computed_amount === 0 ? 'text-neutral-400' : 'text-success'"
+                  class="text-xl font-bold"
                 >
                   {{ computed_amount === 0 ? '$' : '+$' }}{{ computed_amount.toLocaleString() }}
                 </div>
@@ -346,15 +346,15 @@ onMounted(() => {
       </v-card-text>
     </v-card>
 
-    <v-card class="rounded-lg" style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)">
-      <v-card-item class="text-base font-semibold pb-2">股利歷史</v-card-item>
+    <v-card class="rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.08)]">
+      <v-card-item class="font-medium pb-2">股利歷史</v-card-item>
       <v-card-text>
         <v-row class="mb-4" align="stretch">
           <v-col sm="4">
             <v-card class="rounded-lg h-full" variant="tonal">
-              <v-card-text>
-                <div class="text-body-small">實發股利總計</div>
-                <div class="text-body-large font-weight-bold text-success">
+              <v-card-text class="text-sm">
+                <div>實發股利總計</div>
+                <div class="font-bold text-success">
                   {{ total_dividend.toLocaleString() }}
                 </div>
               </v-card-text>
@@ -362,9 +362,9 @@ onMounted(() => {
           </v-col>
           <v-col sm="4">
             <v-card class="rounded-lg h-full" variant="tonal">
-              <v-card-text>
-                <div class="text-body-small">現金股利</div>
-                <div class="text-body-large font-weight-bold">
+              <v-card-text class="text-sm">
+                <div>現金股利</div>
+                <div class="font-bold">
                   {{ total_cash.toLocaleString() }}
                 </div>
               </v-card-text>
@@ -372,9 +372,9 @@ onMounted(() => {
           </v-col>
           <v-col sm="4">
             <v-card class="rounded-lg h-full" variant="tonal">
-              <v-card-text>
-                <div class="text-body-small">股票股利</div>
-                <div class="text-body-large font-weight-bold">
+              <v-card-text class="text-sm">
+                <div>股票股利</div>
+                <div class="font-bold">
                   {{ total_stock.toLocaleString() }}
                 </div>
               </v-card-text>
@@ -424,7 +424,7 @@ onMounted(() => {
           <v-col sm="6" md="4">
             <v-btn variant="outlined" @click="clearFilters">清除</v-btn>
           </v-col>
-          <v-col sm="6" md="4" class="d-flex">
+          <v-col sm="6" md="4" class="flex">
             <v-btn color="success" variant="outlined" @click="exportCsv" class="mr-2"
               >匯出 CSV</v-btn
             >
@@ -443,29 +443,29 @@ onMounted(() => {
 
         <v-table>
           <thead>
-            <tr class="bg-grey-lighten-4">
-              <th class="text-left font-semibold text-grey-darken-1">發放日</th>
-              <th class="text-left font-semibold text-grey-darken-1">商品</th>
-              <th class="text-center font-semibold text-grey-darken-1">類別</th>
-              <th class="text-right font-semibold text-grey-darken-1">基準日持有股數</th>
-              <th class="text-right font-semibold text-grey-darken-1">每股股利</th>
-              <th class="text-right font-semibold text-grey-darken-1">匯費</th>
-              <th class="text-right font-semibold text-grey-darken-1">實發股利</th>
-              <th class="text-center font-semibold text-grey-darken-1">操作</th>
+            <tr class="bg-neutral-100">
+              <th class="text-left font-medium text-neutral-500">發放日</th>
+              <th class="text-left font-medium text-neutral-500">商品</th>
+              <th class="text-center font-medium text-neutral-500">類別</th>
+              <th class="text-right font-medium text-neutral-500">基準日持有股數</th>
+              <th class="text-right font-medium text-neutral-500">每股股利</th>
+              <th class="text-right font-medium text-neutral-500">匯費</th>
+              <th class="text-right font-medium text-neutral-500">實發股利</th>
+              <th class="text-center font-medium text-neutral-500">操作</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="d in dividends" :key="d.id">
               <td>{{ formatDate(d.pay_date) }}</td>
               <td>
-                <div class="font-weight-bold">{{ d.ticker }}</div>
-                <div class="text-body-small text-grey">{{ d.name }}</div>
+                <div class="font-bold">{{ d.ticker }}</div>
+                <div class="text-sm text-neutral-400">{{ d.name }}</div>
               </td>
               <td class="text-center">
                 <v-chip
                   :color="d.category === 'cash' ? 'success' : 'orange'"
                   size="small"
-                  class="text-xs"
+                  class="text-sm"
                 >
                   {{ d.category === 'cash' ? '現金' : '股票' }}
                 </v-chip>
@@ -481,7 +481,7 @@ onMounted(() => {
               </td>
             </tr>
             <tr v-if="dividends.length === 0">
-              <td colspan="8" class="text-center text-grey pa-4">尚無股利紀錄</td>
+              <td colspan="8" class="text-center text-neutral-400 pa-4">尚無股利紀錄</td>
             </tr>
           </tbody>
         </v-table>
