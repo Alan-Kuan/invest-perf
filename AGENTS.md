@@ -173,6 +173,7 @@ The project is a Vue 3 investment performance tracking web app.
 
 - Pre-commit hook runs automatically before each commit: `pnpm typecheck && pnpm lint && pnpm fmt`
 - Hooks are configured via Husky in `.husky/pre-commit`
+- **Note:** No need to manually run typecheck/lint/fmt after making changes - it's automatically done before commit
 
 ## Additional Notes
 
