@@ -178,7 +178,7 @@ async function handleClearCache() {
               ref="file_input"
               type="file"
               accept=".db"
-              style="display: none"
+              class="hidden"
               @change="handleFileChange"
             />
           </v-list>

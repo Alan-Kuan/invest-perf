@@ -217,7 +217,7 @@ onUnmounted(() => {
     <v-card class="mb-4 rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.08)]">
       <v-card-item class="font-medium pb-2">資產配置</v-card-item>
       <v-card-text>
-        <div style="height: 300px">
+        <div class="h-80">
           <Doughnut
             v-if="summary.holdings.length > 0"
             :data="distribution_chart_data"

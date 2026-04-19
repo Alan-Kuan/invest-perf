@@ -545,7 +545,7 @@ onMounted(() => {
               ref="file_input"
               type="file"
               accept=".csv"
-              style="display: none"
+              class="hidden"
               @change="handleFileImport"
             />
           </v-col>

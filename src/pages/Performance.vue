@@ -545,7 +545,7 @@ onMounted(() => {
             </div>
           </v-card-item>
           <v-card-text>
-            <div style="height: 250px">
+            <div class="h-65">
               <Chart
                 v-if="annual_performance.length > 0"
                 type="bar"
@@ -576,7 +576,7 @@ onMounted(() => {
             </div>
           </v-card-item>
           <v-card-text>
-            <div style="height: 250px">
+            <div class="h-65">
               <Chart
                 v-if="annual_performance.length > 0"
                 type="line"
