@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
+import { ref, computed, onUnmounted, watch } from 'vue';
 import { Doughnut } from 'vue-chartjs';
 
 import { useDatabase } from '../composables/useDatabase';
@@ -22,12 +22,17 @@ const summary = ref<PortfolioSummary>({
 });
 
 const is_loading_prices = ref(false);
-const last_update = ref<string | null>(null);
+const last_update = ref<number | null>(loadLastUpdate());
 let price_update_interval: ReturnType<typeof setInterval> | null = null;
 
 const portfolio_roi = computed(() => {
   if (summary.value.total_cost <= 0) return null;
   return (summary.value.unrealized_gain / summary.value.total_cost) * 100;
+});
+
+const last_update_display = computed(() => {
+  if (!last_update.value) return null;
+  return new Date(last_update.value).toLocaleTimeString();
 });
 
 const distribution_chart_options = {
@@ -67,6 +72,15 @@ const distribution_chart_data = computed(() => ({
   ],
 }));
 
+function loadLastUpdate(): number | null {
+  const stored = localStorage.getItem('price_last_update');
+  return stored ? parseInt(stored, 10) : null;
+}
+
+function saveLastUpdate(ts: number): void {
+  localStorage.setItem('price_last_update', ts.toString());
+}
+
 function isMarketHours(): boolean {
   const now = new Date();
   const day = now.getDay();
@@ -102,6 +116,13 @@ function stopPriceUpdateTimer() {
 async function fetchAllPrices() {
   if (summary.value.holdings.length === 0) return;
 
+  const now = Date.now();
+  const last_ts = last_update.value;
+  if (last_ts && !isMarketHours()) {
+    const hours_since_update = (now - last_ts) / (1000 * 60 * 60);
+    if (hours_since_update < 8) return;
+  }
+
   is_loading_prices.value = true;
 
   try {
@@ -110,27 +131,26 @@ async function fetchAllPrices() {
 
     updateCurrPricesCache(prices);
     summary.value = getPortfolioSummary();
-    last_update.value = new Date().toLocaleTimeString();
+    last_update.value = now;
+    saveLastUpdate(now);
   } finally {
     is_loading_prices.value = false;
   }
 }
 
-watch(is_ready, ready => {
-  if (ready) {
-    summary.value = getPortfolioSummary();
-  }
-});
+watch(
+  is_ready,
+  async ready => {
+    if (!ready) return;
 
-onMounted(() => {
-  if (is_ready.value) {
     summary.value = getPortfolioSummary();
+    await fetchAllPrices();
     if (isMarketHours()) {
-      fetchAllPrices();
       startPriceUpdateTimer();
     }
-  }
-});
+  },
+  { immediate: true },
+);
 
 onUnmounted(() => {
   stopPriceUpdateTimer();
@@ -142,7 +162,9 @@ onUnmounted(() => {
     <div class="flex justify-between items-center mb-4">
       <h2 class="text-2xl">投資組合</h2>
       <div class="flex items-center">
-        <span v-if="last_update" class="text-neutral-400 mr-4">更新時間: {{ last_update }}</span>
+        <span v-if="last_update_display" class="text-neutral-400 mr-4"
+          >更新時間: {{ last_update_display }}</span
+        >
         <v-btn
           variant="tonal"
           size="small"

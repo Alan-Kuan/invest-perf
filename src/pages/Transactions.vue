@@ -285,16 +285,17 @@ async function handleDelete(id: string) {
   }
 }
 
-watch(is_ready, ready => {
-  if (ready) {
+watch(
+  is_ready,
+  ready => {
+    if (!ready) return;
     loadTransactions();
-  }
-});
+  },
+  { immediate: true },
+);
 
-onMounted(() => {
-  if (is_ready.value) {
-    loadTransactions();
-  }
+onMounted(async () => {
+  await loadStockList();
 });
 </script>
 

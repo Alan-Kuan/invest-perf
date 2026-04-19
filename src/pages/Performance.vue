@@ -12,7 +12,7 @@ import {
   Filler,
 } from 'chart.js';
 import katex from 'katex';
-import { ref, onMounted, watch, computed } from 'vue';
+import { ref, watch, computed } from 'vue';
 import { Chart } from 'vue-chartjs';
 
 import { useDatabase } from '../composables/useDatabase';
@@ -389,17 +389,15 @@ const cumulative_chart_options = {
   },
 };
 
-watch(is_ready, ready => {
-  if (ready) {
+watch(
+  is_ready,
+  async ready => {
+    if (!ready) return;
     loadStats();
-  }
-});
-
-onMounted(() => {
-  if (is_ready.value) {
-    loadStats();
-  }
-});
+    await handleRefresh();
+  },
+  { immediate: true },
+);
 </script>
 
 <template>
