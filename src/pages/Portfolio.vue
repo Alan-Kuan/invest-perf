@@ -244,7 +244,9 @@ onUnmounted(() => {
                   平均成本
                   <v-tooltip text="考慮手續費的每股平均成本">
                     <template v-slot:activator="{ props }">
-                      <v-icon size="x-small" class="ml-1" v-bind="props">mdi-help-circle</v-icon>
+                      <v-icon size="x-small" class="absolute left--2.5" v-bind="props"
+                        >mdi-help-circle</v-icon
+                      >
                     </template>
                   </v-tooltip>
                 </div>
@@ -252,12 +254,14 @@ onUnmounted(() => {
               <th class="text-right font-medium text-neutral-500">總成本</th>
               <th class="text-right font-medium text-neutral-500">現價</th>
               <th class="text-right font-medium text-neutral-500">現值</th>
-              <th class="text-right font-medium text-neutral-500">
+              <th class="text-right font-medium text-neutral-500 relative">
                 <div class="flex items-center justify-end">
                   預估淨損益
                   <v-tooltip text="考慮手續費（0.1425%）與交易稅（股票：0.3%、ETF：0.1%)">
                     <template v-slot:activator="{ props }">
-                      <v-icon size="x-small" class="ml-1" v-bind="props">mdi-help-circle</v-icon>
+                      <v-icon size="x-small" class="absolute left--2.5" v-bind="props"
+                        >mdi-help-circle</v-icon
+                      >
                     </template>
                   </v-tooltip>
                 </div>
