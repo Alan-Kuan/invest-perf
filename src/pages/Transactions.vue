@@ -374,16 +374,20 @@ onMounted(async () => {
               >
                 <template #append-inner>
                   <div class="flex">
-                    <v-btn size="small" color="success" variant="text" @click="adjustShares(1000)"
+                    <v-btn size="small" class="text-rise" variant="text" @click="adjustShares(1000)"
                       >+1K</v-btn
                     >
-                    <v-btn size="small" color="success" variant="text" @click="adjustShares(100)"
+                    <v-btn size="small" class="text-rise" variant="text" @click="adjustShares(100)"
                       >+100</v-btn
                     >
-                    <v-btn size="small" color="error" variant="text" @click="adjustShares(-1000)"
+                    <v-btn
+                      size="small"
+                      class="text-fall"
+                      variant="text"
+                      @click="adjustShares(-1000)"
                       >-1K</v-btn
                     >
-                    <v-btn size="small" color="error" variant="text" @click="adjustShares(-100)"
+                    <v-btn size="small" class="text-fall" variant="text" @click="adjustShares(-100)"
                       >-100</v-btn
                     >
                   </div>
@@ -444,8 +448,8 @@ onMounted(async () => {
                     computed_net_amount === 0
                       ? 'text-neutral-400'
                       : form.type === 'buy'
-                        ? 'text-error'
-                        : 'text-success'
+                        ? 'text-fall'
+                        : 'text-rise'
                   "
                   class="text-xl font-bold"
                 >
@@ -590,8 +594,8 @@ onMounted(async () => {
                   t.net_amount === 0
                     ? 'text-neutral-400'
                     : t.type === 'buy'
-                      ? 'text-error'
-                      : 'text-success'
+                      ? 'text-fall'
+                      : 'text-rise'
                 "
               >
                 {{ t.net_amount === 0 ? '-' : t.type === 'buy' ? '-' : '+'

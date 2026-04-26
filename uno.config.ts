@@ -13,6 +13,10 @@ export default defineConfig({
     }),
   ],
   transformers: [transformerDirectives()],
+  shortcuts: {
+    'text-rise': 'text-[var(--rise-color)]',
+    'text-fall': 'text-[var(--fall-color)]',
+  },
   theme: {
     breakpoint: breakpoints.forUnoCSS,
   },

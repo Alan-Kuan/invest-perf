@@ -113,12 +113,12 @@ function stopPriceUpdateTimer() {
   }
 }
 
-async function fetchAllPrices() {
+async function fetchAllPrices(force = false) {
   if (summary.value.holdings.length === 0) return;
 
   const now = Date.now();
   const last_ts = last_update.value;
-  if (last_ts && !isMarketHours()) {
+  if (!force && last_ts && !isMarketHours()) {
     const hours_since_update = (now - last_ts) / (1000 * 60 * 60);
     if (hours_since_update < 8) return;
   }
@@ -170,7 +170,7 @@ onUnmounted(() => {
           size="small"
           :loading="is_loading_prices"
           :disabled="summary.holdings.length === 0"
-          @click="fetchAllPrices"
+          @click="fetchAllPrices(true)"
         >
           更新現價
         </v-btn>
@@ -211,7 +211,7 @@ onUnmounted(() => {
             </div>
             <div
               class="font-bold text-base"
-              :class="summary.unrealized_gain >= 0 ? 'text-success' : 'text-error'"
+              :class="summary.unrealized_gain >= 0 ? 'text-rise' : 'text-fall'"
             >
               {{ summary.unrealized_gain >= 0 ? '+' : ''
               }}{{ summary.unrealized_gain.toLocaleString() }}
@@ -226,7 +226,7 @@ onUnmounted(() => {
             <div
               v-if="portfolio_roi !== null"
               class="font-bold text-base"
-              :class="portfolio_roi >= 0 ? 'text-success' : 'text-error'"
+              :class="portfolio_roi >= 0 ? 'text-rise' : 'text-fall'"
             >
               {{ portfolio_roi >= 0 ? '+' : '' }}{{ portfolio_roi.toFixed(2) }}%
             </div>
@@ -304,14 +304,14 @@ onUnmounted(() => {
               </td>
               <td
                 class="text-right"
-                :class="(h.unrealized_gain || 0) >= 0 ? 'text-success' : 'text-error'"
+                :class="(h.unrealized_gain || 0) >= 0 ? 'text-rise' : 'text-fall'"
               >
                 {{ (h.unrealized_gain || 0) >= 0 ? '+' : ''
                 }}{{ (h.unrealized_gain || 0).toLocaleString() }}
               </td>
               <td
                 class="text-right"
-                :class="(h.unrealized_roi || 0) >= 0 ? 'text-success' : 'text-error'"
+                :class="(h.unrealized_roi || 0) >= 0 ? 'text-rise' : 'text-fall'"
               >
                 {{ (h.unrealized_roi || 0) >= 0 ? '+' : ''
                 }}{{ (h.unrealized_roi || 0).toFixed(2) }}%

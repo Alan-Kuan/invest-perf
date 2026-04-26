@@ -1,8 +1,14 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import { onMounted, provide } from 'vue';
+import { computed, onMounted, provide, ref } from 'vue';
 
 import { useDatabase } from './composables/useDatabase';
+import {
+  applyRiseFallColorScheme,
+  getRiseFallColorSchemeLabel,
+  loadRiseFallColorScheme,
+  saveRiseFallColorScheme,
+  type RiseFallColorScheme,
+} from './utils/rise-fall-colors';
 
 const { init, exportData, importData, clear } = useDatabase();
 
@@ -12,6 +18,7 @@ const is_importing = ref(false);
 const snackbar = ref(false);
 const snackbar_text = ref('');
 const snackbar_color = ref('success');
+const rise_fall_color_scheme = ref<RiseFallColorScheme>('red-rise');
 
 const confirm_dialog = ref(false);
 const confirm_message = ref('');
@@ -41,6 +48,10 @@ function handleExport() {
   exportData();
 }
 
+const rise_fall_color_scheme_label = computed(() =>
+  getRiseFallColorSchemeLabel(rise_fall_color_scheme.value),
+);
+
 function handleImportClick() {
   file_input.value?.click();
 }
@@ -49,8 +60,17 @@ provide('showSnackbar', showSnackbar);
 provide('showConfirm', showConfirm);
 
 onMounted(async () => {
+  rise_fall_color_scheme.value = loadRiseFallColorScheme();
+  applyRiseFallColorScheme(rise_fall_color_scheme.value);
   await init();
 });
+
+function toggleRiseFallColorScheme() {
+  rise_fall_color_scheme.value =
+    rise_fall_color_scheme.value === 'red-rise' ? 'green-rise' : 'red-rise';
+  saveRiseFallColorScheme(rise_fall_color_scheme.value);
+  applyRiseFallColorScheme(rise_fall_color_scheme.value);
+}
 
 async function handleFileChange(event: Event) {
   const target = event.target as HTMLInputElement;
@@ -94,6 +114,7 @@ async function handleClearCache() {
   localStorage.removeItem('curr_prices_cache');
   localStorage.removeItem('price_last_update');
   localStorage.removeItem('stock_list_cache');
+  localStorage.removeItem('rise_fall_color_scheme');
   showSnackbar('快取已清除');
 }
 </script>
@@ -140,6 +161,18 @@ async function handleClearCache() {
 
       <template #append>
         <div class="pa-4">
+          <v-divider class="mb-4" />
+          <div class="text-sm text-neutral-300 mb-2">設定</div>
+          <v-list nav density="compact" bg-color="secondary">
+            <v-list-item
+              @click="toggleRiseFallColorScheme"
+              prepend-icon="mdi-palette-swatch-variant"
+              density="compact"
+              class="mb-1 rounded-lg px-2"
+            >
+              <template #title> 漲跌顏色：{{ rise_fall_color_scheme_label }} </template>
+            </v-list-item>
+          </v-list>
           <v-divider class="mb-4" />
           <div class="text-sm text-neutral-300 mb-2">資料管理</div>
           <v-list nav density="compact" bg-color="secondary">

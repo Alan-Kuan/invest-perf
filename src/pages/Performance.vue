@@ -464,7 +464,7 @@ watch(
               <div class="text-neutral-400">已實現損益</div>
               <div
                 class="font-bold text-base"
-                :class="stats.realized_gain >= 0 ? 'text-success' : 'text-error'"
+                :class="stats.realized_gain >= 0 ? 'text-rise' : 'text-fall'"
               >
                 {{ stats.realized_gain >= 0 ? '+' : '' }}{{ stats.realized_gain.toLocaleString() }}
               </div>
@@ -473,7 +473,7 @@ watch(
               <div class="text-neutral-400">未實現損益</div>
               <div
                 class="font-bold text-base"
-                :class="stats.unrealized_gain >= 0 ? 'text-success' : 'text-error'"
+                :class="stats.unrealized_gain >= 0 ? 'text-rise' : 'text-fall'"
               >
                 {{ stats.unrealized_gain >= 0 ? '+' : ''
                 }}{{ stats.unrealized_gain.toLocaleString() }}
@@ -481,7 +481,7 @@ watch(
             </template>
             <template v-else-if="i === 3">
               <div class="text-neutral-400">股利收入</div>
-              <div class="font-bold text-base text-success">
+              <div class="font-bold text-base text-rise">
                 {{ stats.total_dividend.toLocaleString() }}
               </div>
             </template>
@@ -489,7 +489,7 @@ watch(
               <div class="text-neutral-400">總損益</div>
               <div
                 class="font-bold text-base"
-                :class="stats.total_return >= 0 ? 'text-success' : 'text-error'"
+                :class="stats.total_return >= 0 ? 'text-rise' : 'text-fall'"
               >
                 {{ stats.total_return >= 0 ? '+' : '' }}{{ stats.total_return.toLocaleString() }}
               </div>

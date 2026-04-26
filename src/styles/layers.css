@@ -10,3 +10,15 @@
 @layer uno-default;
 
 @layer vuetify-final;
+
+@layer vuetify-final {
+  :root {
+    --rise-color: rgb(var(--v-theme-error));
+    --fall-color: rgb(var(--v-theme-success));
+  }
+
+  :root[data-rise-fall-scheme='green-rise'] {
+    --rise-color: rgb(var(--v-theme-success));
+    --fall-color: rgb(var(--v-theme-error));
+  }
+}

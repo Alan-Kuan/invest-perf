@@ -332,7 +332,7 @@ onMounted(() => {
               <div class="flex items-baseline mr-6">
                 <div class="mr-2 text-neutral-400 text-lg">實發股利</div>
                 <div
-                  :class="computed_amount === 0 ? 'text-neutral-400' : 'text-success'"
+                  :class="computed_amount === 0 ? 'text-neutral-400' : 'text-rise'"
                   class="text-xl font-bold"
                 >
                   {{ computed_amount === 0 ? '$' : '+$' }}{{ computed_amount.toLocaleString() }}
@@ -354,7 +354,7 @@ onMounted(() => {
             <v-card class="rounded-lg h-full" variant="tonal">
               <v-card-text class="text-sm">
                 <div>實發股利總計</div>
-                <div class="font-bold text-success">
+                <div class="font-bold text-rise">
                   {{ total_dividend.toLocaleString() }}
                 </div>
               </v-card-text>
@@ -473,7 +473,7 @@ onMounted(() => {
               <td class="text-right">{{ d.shares.toLocaleString() }}</td>
               <td class="text-right">{{ d.per_share.toLocaleString() }}</td>
               <td class="text-right">{{ d.fee.toLocaleString() }}</td>
-              <td class="text-right text-success">{{ d.amount.toLocaleString() }}</td>
+              <td class="text-right text-rise">{{ d.amount.toLocaleString() }}</td>
               <td class="text-center">
                 <v-btn color="error" size="small" variant="text" @click="handleDelete(d.id)">
                   刪除
