@@ -65,7 +65,7 @@ async function clearIndexedDB(): Promise<void> {
 
 export async function initDatabase(): Promise<Database> {
   const sql_js = await initSqlJs({
-    locateFile: () => '/sql-wasm.wasm',
+    locateFile: () => `${import.meta.env.BASE_URL}sql-wasm.wasm`,
   });
 
   const saved_data = await loadFromIndexedDB();
