@@ -13,7 +13,7 @@ import {
 } from 'chart.js';
 import katex from 'katex';
 import { ref, watch, computed } from 'vue';
-import { Chart } from 'vue-chartjs';
+import { Bar, Line } from 'vue-chartjs';
 
 import { useDatabase } from '../composables/useDatabase';
 import { useDividends } from '../composables/useDividends';
@@ -587,9 +587,8 @@ watch(
           </v-card-item>
           <v-card-text>
             <div class="h-65">
-              <Chart
+              <Bar
                 v-if="annual_performance.length > 0"
-                type="bar"
                 :data="performance_chart_data"
                 :options="performance_chart_options"
               />
@@ -618,9 +617,8 @@ watch(
           </v-card-item>
           <v-card-text>
             <div class="h-65">
-              <Chart
+              <Line
                 v-if="annual_performance.length > 0"
-                type="line"
                 :data="cumulative_chart_data"
                 :options="cumulative_chart_options"
               />
