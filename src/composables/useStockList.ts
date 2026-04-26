@@ -1,5 +1,7 @@
 import { ref } from 'vue';
 
+import { buildCorsProxyUrl } from '../utils/cors-proxy';
+
 interface Stock {
   ticker: string;
   name: string;
@@ -39,8 +41,8 @@ export function useStockList() {
 
     try {
       const [stock_res, etf_res] = await Promise.all([
-        fetch('/api/twse/v1/exchangeReport/BWIBBU_d'),
-        fetch('/api/twse/v1/exchangeReport/TWT53U'),
+        fetch(buildCorsProxyUrl('https://openapi.twse.com.tw/v1/exchangeReport/BWIBBU_d')),
+        fetch(buildCorsProxyUrl('https://openapi.twse.com.tw/v1/exchangeReport/TWT53U')),
       ]);
 
       const [stock_data, etf_data] = await Promise.all([stock_res.json(), etf_res.json()]);

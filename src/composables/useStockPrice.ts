@@ -1,3 +1,4 @@
+import { buildCorsProxyUrl } from '../utils/cors-proxy';
 import { useDatabase } from './useDatabase';
 
 const historical_price_cache = new Map<string, Map<string, number | string>>();
@@ -35,7 +36,9 @@ export function useStockPrice() {
 
     try {
       const codes = tickers.map(t => `tse_${t}.tw`).join('|');
-      const url = `/api/mis/stock/api/getStockInfo.jsp?ex_ch=${codes}&json=1&delay=0`;
+      const url = buildCorsProxyUrl(
+        `https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch=${codes}&json=1&delay=0`,
+      );
 
       const controller = new AbortController();
       const timeout_id = setTimeout(() => controller.abort(), 10000);
@@ -96,7 +99,9 @@ export function useStockPrice() {
     try {
       const date_str = date.replace(/-/g, '');
       const response = await fetch(
-        `https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=${date_str}&stockNo=${ticker}`,
+        buildCorsProxyUrl(
+          `https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=${date_str}&stockNo=${ticker}`,
+        ),
       );
 
       if (!response.ok || response.status !== 200) {

@@ -28,18 +28,4 @@ export default defineConfig({
       ],
     }),
   ],
-  server: {
-    proxy: {
-      '/api/twse': {
-        target: 'https://openapi.twse.com.tw',
-        changeOrigin: true,
-        rewrite: path => path.replace(/^\/api\/twse/, ''),
-      },
-      '/api/mis': {
-        target: 'https://mis.twse.com.tw',
-        changeOrigin: true,
-        rewrite: path => path.replace(/^\/api\/mis/, ''),
-      },
-    },
-  },
 });
