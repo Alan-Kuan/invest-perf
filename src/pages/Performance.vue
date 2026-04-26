@@ -35,7 +35,7 @@ ChartJS.register(
 
 const { is_ready, query } = useDatabase();
 const { transactions, loadTransactions } = useTransactions();
-const { dividends, loadDividends, getDividendsByTicker } = useDividends();
+const { dividends, loadDividends } = useDividends();
 const { getPortfolioSummary } = usePortfolio();
 const { fetchHistoricalPrice } = useStockPrice();
 
@@ -73,6 +73,83 @@ interface AnnualData {
 
 const annual_performance = ref<AnnualData[]>([]);
 
+interface YearlyHolding {
+  shares: number;
+  carry_cost: number;
+}
+
+interface YearlyTransactionGroup {
+  [year: number]: ReturnType<typeof loadTransactions>;
+}
+
+interface YearlyDividendGroup {
+  [year: number]: number;
+}
+
+function getSaleCostRate(ticker: string): number {
+  const fee_rate = 0.001425;
+  const tax_rate = ticker.startsWith('00') ? 0.001 : 0.003;
+  return 1 - fee_rate - tax_rate;
+}
+
+function getYearBounds(
+  year: number,
+  current_year: number,
+): {
+  start_date: string;
+  end_date: string;
+} {
+  const start_date = `${year}-01-01`;
+  const end_date = year === current_year ? new Date().toISOString().split('T')[0] : `${year}-12-31`;
+
+  return { start_date, end_date };
+}
+
+function getRemainingWeight(date: string, start_date: string, end_date: string): number {
+  const tx_time = new Date(`${date}T00:00:00`).getTime();
+  const start_time = new Date(`${start_date}T00:00:00`).getTime();
+  const end_time = new Date(`${end_date}T00:00:00`).getTime();
+  const total_days = Math.max(1, Math.floor((end_time - start_time) / 86400000) + 1);
+  const elapsed_days = Math.max(
+    0,
+    Math.min(total_days - 1, Math.floor((tx_time - start_time) / 86400000)),
+  );
+
+  return (total_days - elapsed_days) / total_days;
+}
+
+function groupTransactionsByYear(): YearlyTransactionGroup {
+  const grouped: YearlyTransactionGroup = {};
+
+  for (const transaction of transactions.value) {
+    const year = parseInt(transaction.date.substring(0, 4));
+
+    if (!grouped[year]) {
+      grouped[year] = [];
+    }
+
+    grouped[year].push(transaction);
+  }
+
+  return grouped;
+}
+
+function groupDividendsByYear(): YearlyDividendGroup {
+  const grouped: YearlyDividendGroup = {};
+
+  for (const dividend of dividends.value) {
+    const year = parseInt(dividend.pay_date.substring(0, 4));
+
+    if (!grouped[year]) {
+      grouped[year] = 0;
+    }
+
+    grouped[year] += dividend.amount;
+  }
+
+  return grouped;
+}
+
 async function loadStats() {
   loadTransactions({ sort_order: 'ASC' });
   loadDividends({ sort_order: 'ASC' });
@@ -101,54 +178,17 @@ async function loadAnnualPerformance() {
 
   const first_year = parseInt(transactions.value[0].date.substring(0, 4));
   const current_year = parseInt(new Date().getFullYear().toString());
-
-  const stock_yearly_data = new Map<
-    number,
-    Map<
-      string,
-      {
-        total_cost: number;
-        bought_shares: number;
-        total_proceeds: number;
-        sold_shares: number;
-      }
-    >
-  >();
-
-  for (const t of transactions.value) {
-    const year = parseInt(t.date.substring(0, 4));
-
-    if (!stock_yearly_data.has(year)) {
-      stock_yearly_data.set(year, new Map());
-    }
-
-    const year_data = stock_yearly_data.get(year)!;
-
-    if (!year_data.has(t.ticker)) {
-      year_data.set(t.ticker, {
-        total_cost: 0,
-        bought_shares: 0,
-        total_proceeds: 0,
-        sold_shares: 0,
-      });
-    }
-
-    const stock_data = year_data.get(t.ticker)!;
-
-    if (t.type === 'buy') {
-      stock_data.total_cost += t.net_amount;
-      stock_data.bought_shares += t.shares;
-    } else if (t.type === 'sell') {
-      stock_data.total_proceeds += t.net_amount;
-      stock_data.sold_shares += t.shares;
-    }
-  }
-
   const annual_data_list: AnnualData[] = [];
-  const today = new Date().toISOString().split('T')[0];
+  const transactions_by_year = groupTransactionsByYear();
+  const dividends_by_year = groupDividendsByYear();
+  let carry_holdings = new Map<string, YearlyHolding>();
 
   for (let year = first_year; year <= current_year; year++) {
-    if (!stock_yearly_data.has(year)) {
+    const { start_date, end_date } = getYearBounds(year, current_year);
+    const yearly_transactions = transactions_by_year[year] ?? [];
+    const dividend_income = dividends_by_year[year] ?? 0;
+
+    if (yearly_transactions.length === 0 && carry_holdings.size === 0 && dividend_income === 0) {
       annual_data_list.push({
         year,
         realized_return_rate: 0,
@@ -159,68 +199,69 @@ async function loadAnnualPerformance() {
       continue;
     }
 
-    const next_year = year + 1;
+    let beginning_value = 0;
     let total_realized_gain = 0;
     let total_unrealized_gain = 0;
-    let total_return_rate = 0;
-    let total_cost_of_realized_gain = 0;
-    let total_cost_of_unrealized_gain = 0;
+    let weighted_cash_flow = 0;
 
-    const yearly_data = stock_yearly_data.get(year)!;
+    for (const holding of carry_holdings.values()) {
+      beginning_value += holding.carry_cost;
+    }
 
-    for (const [ticker, stock_data] of yearly_data) {
-      const dividend = getDividendsByTicker(ticker, year);
-      const avg_price = (stock_data.total_cost - dividend) / stock_data.bought_shares;
-
-      const last_trade_day = year == current_year ? today : `${year}-12-31`;
-      const last_trade_day_price = (await fetchHistoricalPrice(ticker, last_trade_day)) || 0;
-      const remaining_shares = stock_data.bought_shares - stock_data.sold_shares;
-
-      const realized_gain = stock_data.total_proceeds - stock_data.sold_shares * avg_price;
-      const unrealized_gain = remaining_shares * (last_trade_day_price - avg_price);
-
-      total_realized_gain += realized_gain;
-      total_unrealized_gain += unrealized_gain;
-      total_cost_of_realized_gain += stock_data.sold_shares * avg_price;
-      total_cost_of_unrealized_gain += remaining_shares * avg_price;
-
-      if (remaining_shares == 0) continue;
-
-      if (!stock_yearly_data.has(next_year)) {
-        stock_yearly_data.set(next_year, new Map());
-      }
-
-      const yearly_data_next = stock_yearly_data.get(next_year)!;
-
-      if (!yearly_data_next.has(ticker)) {
-        yearly_data_next.set(ticker, {
-          total_cost: 0,
-          bought_shares: 0,
-          total_proceeds: 0,
-          sold_shares: 0,
+    for (const transaction of yearly_transactions) {
+      if (!carry_holdings.has(transaction.ticker)) {
+        carry_holdings.set(transaction.ticker, {
+          shares: 0,
+          carry_cost: 0,
         });
       }
 
-      const stock_data_next_year = yearly_data_next.get(ticker)!;
+      const holding = carry_holdings.get(transaction.ticker)!;
+      const weight = getRemainingWeight(transaction.date, start_date, end_date);
 
-      stock_data_next_year.total_cost += remaining_shares * last_trade_day_price;
-      stock_data_next_year.bought_shares += remaining_shares;
+      if (transaction.type === 'buy') {
+        holding.shares += transaction.shares;
+        holding.carry_cost += transaction.net_amount;
+        weighted_cash_flow += transaction.net_amount * weight;
+        continue;
+      }
+
+      const avg_cost = holding.shares > 0 ? holding.carry_cost / holding.shares : 0;
+      const cost_basis = transaction.shares * avg_cost;
+
+      total_realized_gain += transaction.net_amount - cost_basis;
+      holding.shares -= transaction.shares;
+      holding.carry_cost -= cost_basis;
+      weighted_cash_flow -= transaction.net_amount * weight;
+
+      if (holding.shares <= 0) {
+        carry_holdings.delete(transaction.ticker);
+      }
     }
 
-    total_return_rate =
-      (total_realized_gain + total_unrealized_gain) /
-      (total_cost_of_realized_gain + total_cost_of_unrealized_gain);
-    const realized_return_rate =
-      total_cost_of_realized_gain > 0 ? total_realized_gain / total_cost_of_realized_gain : 0;
-    const unrealized_return_rate =
-      total_cost_of_unrealized_gain > 0 ? total_unrealized_gain / total_cost_of_unrealized_gain : 0;
+    for (const [ticker, holding] of carry_holdings) {
+      if (holding.shares <= 0) continue;
+
+      const end_price = (await fetchHistoricalPrice(ticker, end_date)) || 0;
+      const end_value = holding.shares * end_price * getSaleCostRate(ticker);
+
+      total_unrealized_gain += end_value - holding.carry_cost;
+      holding.carry_cost = end_value;
+    }
+
+    const invested_capital = beginning_value + weighted_cash_flow;
+    const realized_component = total_realized_gain + dividend_income;
+    const total_gain = realized_component + total_unrealized_gain;
+    const realized_return_rate = realized_component / invested_capital;
+    const unrealized_return_rate = total_unrealized_gain / invested_capital;
+    const total_return_rate = total_gain / invested_capital;
 
     annual_data_list.push({
       year,
       realized_return_rate,
       unrealized_return_rate,
       total_return_rate,
-      total_gain: total_realized_gain + total_unrealized_gain,
+      total_gain,
     });
   }
 
@@ -485,7 +526,7 @@ watch(
                       class="text-xs"
                       v-html="
                         katex.renderToString(
-                          '\\text{已實現報酬成本} = \\sum (\\text{買入均價} \\times \\text{賣出股數} - \\text{實發股利} \\times \\dfrac{\\text{賣出股數}}{\\text{總初始股數}})',
+                          '\\text{加權投入資本} = \\text{年初部位淨值} + \\sum (\\text{買入金額} \\times \\text{剩餘年度權重}) - \\sum (\\text{賣出金額} \\times \\text{剩餘年度權重})',
                           { throwOnError: false },
                         )
                       "
@@ -496,7 +537,7 @@ watch(
                       class="text-xs"
                       v-html="
                         katex.renderToString(
-                          '\\text{未實現報酬成本} = \\sum (\\text{買入均價} \\times \\text{剩餘股數} - \\text{實發股利} \\times \\dfrac{\\text{剩餘股數}}{\\text{總初始股數}})',
+                          '\\text{年末持股淨值} = \\sum (\\text{年末收盤價} \\times \\text{持股}) \\times (1 - \\text{手續費率} - \\text{交易稅率})',
                           { throwOnError: false },
                         )
                       "
@@ -507,7 +548,7 @@ watch(
                       class="text-xs"
                       v-html="
                         katex.renderToString(
-                          '\\text{已實現報酬率} = \\dfrac{\\sum (\\text{賣出價} \\times \\text{賣出股數}) - \\text{已實現報酬成本}}{\\text{已實現報酬成本}} \\times 100\\%',
+                          '\\text{已實現報酬率} = \\dfrac{\\text{賣出已實現損益} + \\text{股利收入}}{\\text{加權投入資本}} \\times 100\\%',
                           { throwOnError: false },
                         )
                       "
@@ -518,7 +559,7 @@ watch(
                       class="text-xs"
                       v-html="
                         katex.renderToString(
-                          '\\text{未實現報酬率} = \\dfrac{\\sum (\\text{期末收盤價} \\times \\text{賣出股數}) - \\text{未實現報酬成本}}{\\text{未實現報酬成本}} \\times 100\\%',
+                          '\\text{未實現報酬率} = \\dfrac{\\text{年末持股淨值} - \\text{年末剩餘成本}}{\\text{加權投入資本}} \\times 100\\%',
                           { throwOnError: false },
                         )
                       "
@@ -529,15 +570,17 @@ watch(
                       class="text-xs"
                       v-html="
                         katex.renderToString(
-                          '\\text{總報酬率} = \\text{已實現報酬率} \\times \\dfrac{\\text{賣出股數}}{\\text{總初始股數}} + \\text{未實現報酬率} \\times \\dfrac{\\text{剩餘股數}}{\\text{總初始股數}}',
+                          '\\text{總報酬率} = \\dfrac{\\text{已實現損益} + \\text{股利收入} + \\text{未實現損益}}{\\text{加權投入資本}} \\times 100\\%',
                           { throwOnError: false },
                         )
                       "
                     />
                   </li>
-                  <li class="mt-1">購買手續費會記入成本，賣出手續費和交易稅會從收入扣除</li>
-                  <li class="mt-1">實發股利會被拿來平攤成本</li>
-                  <li class="mt-1">剩餘股票以當年年末收盤價作為成本價留到隔年繼續計算</li>
+                  <li class="mt-1">採用現金流加權的年度報酬率，接近 Modified Dietz 的年度算法</li>
+                  <li class="mt-1">
+                    購買手續費會記入成本，賣出手續費和交易稅會從收入與年末淨值扣除
+                  </li>
+                  <li class="mt-1">剩餘股票以當年年末估算淨值結轉到隔年繼續計算</li>
                 </ul>
               </v-tooltip>
             </div>
