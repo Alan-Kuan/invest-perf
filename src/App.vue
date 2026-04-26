@@ -193,6 +193,10 @@ async function handleClearCache() {
       </v-container>
     </v-main>
 
+    <v-footer app class="justify-center py-1 text-xs text-neutral-600 bg-neutral-300">
+      資料只儲存在此瀏覽器本地端，不會上傳至遠端。
+    </v-footer>
+
     <v-snackbar v-model="snackbar" location="bottom right" :color="snackbar_color" :timeout="3000">
       {{ snackbar_text }}
     </v-snackbar>
