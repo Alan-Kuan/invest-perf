@@ -321,26 +321,33 @@ const performance_chart_data = computed(() => {
       {
         label: '總報酬率',
         data: annual_performance.value.map(a => a.total_return_rate * 100),
-        backgroundColor: '#4caf50',
-        borderRadius: 4,
-        barPercentage: 0.6,
+        type: 'line' as const,
+        borderColor: '#16448c',
+        backgroundColor: 'transparent',
+        pointBackgroundColor: '#16448c',
+        tension: 0.3,
+        order: 1,
       },
       {
-        label: '已實現',
+        label: '已實現報酬率',
         data: annual_performance.value.map(a => a.realized_return_rate * 100),
         backgroundColor: '#2196f3',
         borderRadius: 4,
         barPercentage: 0.6,
+        stack: 'return_rate',
+        order: 2,
       },
       {
-        label: '未實現',
+        label: '未實現報酬率',
         data: annual_performance.value.map(a => a.unrealized_return_rate * 100),
-        backgroundColor: '#ff9800',
+        backgroundColor: '#87cefa',
         borderRadius: 4,
         barPercentage: 0.6,
+        stack: 'return_rate',
+        order: 2,
       },
     ],
-  };
+  } as any;
 });
 
 const cumulative_chart_data = computed(() => {
@@ -387,8 +394,10 @@ const performance_chart_options = {
       grid: {
         display: false,
       },
+      stacked: true,
     },
     y: {
+      stacked: true,
       ticks: {
         callback: (value: number | string) => Number(value).toFixed(1) + '%',
       },
@@ -537,7 +546,7 @@ watch(
                       class="text-xs"
                       v-html="
                         katex.renderToString(
-                          '\\text{年末持股淨值} = \\sum (\\text{年末收盤價} \\times \\text{持股}) \\times (1 - \\text{手續費率} - \\text{交易稅率})',
+                          '\\text{年末持股淨值} = \\sum (\\text{年末收盤價} \\times \\text{剩餘持股}) \\times (1 - \\text{手續費率} - \\text{交易稅率})',
                           { throwOnError: false },
                         )
                       "
@@ -548,7 +557,7 @@ watch(
                       class="text-xs"
                       v-html="
                         katex.renderToString(
-                          '\\text{已實現報酬率} = \\dfrac{\\text{賣出已實現損益} + \\text{股利收入}}{\\text{加權投入資本}} \\times 100\\%',
+                          '\\text{已實現報酬率} = \\dfrac{\\text{已實現損益} + \\text{股利收入}}{\\text{加權投入資本}} \\times 100\\%',
                           { throwOnError: false },
                         )
                       "
