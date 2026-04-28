@@ -147,6 +147,7 @@ The project is a Vue 3 investment performance tracking web app.
 ## Rules
 
 - Do not revert changes that differ from previous requests, as they may be the user's later modifications
+- Do not manually run typecheck/lint/fmt commands after making changes - the pre-commit hook will automatically run `pnpm typecheck && pnpm lint && pnpm fmt` before commit
 
 ## Git Workflow
 
