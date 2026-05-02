@@ -5,6 +5,13 @@ import StockSearch from '../components/StockSearch.vue';
 import { useDatabase } from '../composables/useDatabase';
 import { useDividends, type DividendInput } from '../composables/useDividends';
 import { exportToCsv, parseCsv } from '../utils/csv';
+import {
+  DEFAULT_MARKET,
+  getMarketLabel,
+  MARKET_OPTIONS,
+  normalizeMarket,
+  type Market,
+} from '../utils/market';
 
 const { is_ready } = useDatabase();
 const { dividends, loadDividends, addDividend, deleteDividend, getAvailableYears } = useDividends();
@@ -17,6 +24,7 @@ const import_loading = ref(false);
 function exportCsv() {
   const data = dividends.value.map(d => ({
     發放日: d.pay_date,
+    市場: getMarketLabel(d.market),
     代號: d.ticker,
     名稱: d.name,
     類別: d.category === 'cash' ? '現金股利' : '股票股利',
@@ -46,6 +54,7 @@ async function handleFileImport(event: Event) {
     let imported = 0;
     for (const row of rows) {
       const pay_date = row['發放日'] || row['pay_date'] || row['發放日期'];
+      const market = normalizeMarket(row['市場'] || row['market']);
       const ticker = row['代號'] || row['ticker'];
       const category = row['類別'] || row['category'];
       const shares = parseInt(row['基準日持有股數'] || row['shares']);
@@ -57,6 +66,7 @@ async function handleFileImport(event: Event) {
           pay_date: normalizeDate(pay_date),
           ticker,
           name: row['名稱'] || row['name'] || '',
+          market,
           category: category === '現金股利' || category === 'cash' ? 'cash' : 'stock',
           shares,
           per_share,
@@ -104,6 +114,7 @@ function formatDateToString(date: Date | string): string {
 interface DividendForm {
   pay_date: string;
   pay_date_picker: string;
+  market: Market;
   ticker: string;
   name: string;
   category: 'cash' | 'stock';
@@ -115,6 +126,7 @@ interface DividendForm {
 const form = ref<DividendForm>({
   pay_date: formatDateToString(new Date()),
   pay_date_picker: formatDateToString(new Date()),
+  market: DEFAULT_MARKET,
   ticker: '',
   name: '',
   category: 'cash',
@@ -142,6 +154,7 @@ function confirmDate() {
 }
 
 interface DividendFilters {
+  market: Market | '';
   ticker: string;
   name: string;
   category: string;
@@ -149,6 +162,7 @@ interface DividendFilters {
 }
 
 const filters = ref<DividendFilters>({
+  market: '',
   ticker: '',
   name: '',
   category: '',
@@ -172,6 +186,7 @@ function submitForm() {
     pay_date: form.value.pay_date,
     ticker: form.value.ticker,
     name: form.value.name,
+    market: form.value.market,
     category: form.value.category,
     shares: form.value.shares,
     per_share: form.value.per_share,
@@ -181,6 +196,7 @@ function submitForm() {
   form.value = {
     pay_date: formatDateToString(new Date()),
     pay_date_picker: formatDateToString(new Date()),
+    market: DEFAULT_MARKET,
     ticker: '',
     name: '',
     category: 'cash',
@@ -197,8 +213,9 @@ function applyFilters() {
 }
 
 function clearFilters() {
-  filters.value = { ticker: '', name: '', category: '', year: null };
+  filters.value = { market: '', ticker: '', name: '', category: '', year: null };
   loadDividends();
+  loadAvailableYears();
 }
 
 async function handleDelete(id: string) {
@@ -226,7 +243,7 @@ const available_years = ref<string[]>([]);
 
 const loadAvailableYears = () => {
   if (is_ready.value) {
-    available_years.value = getAvailableYears();
+    available_years.value = getAvailableYears(filters.value.market || undefined);
   }
 };
 
@@ -275,9 +292,20 @@ onMounted(() => {
             </v-col>
 
             <v-col cols="12" sm="6" md="3">
+              <v-select
+                v-model="form.market"
+                :items="MARKET_OPTIONS"
+                label="市場"
+                variant="outlined"
+                density="compact"
+              />
+            </v-col>
+
+            <v-col cols="12" sm="6" md="3">
               <StockSearch
                 :ticker="form.ticker"
                 :name="form.name"
+                :market="form.market"
                 placeholder="輸入代號或名稱搜尋"
                 @update:ticker="form.ticker = $event"
                 @update:name="form.name = $event"
@@ -384,9 +412,25 @@ onMounted(() => {
 
         <v-row class="mb-4" align="center">
           <v-col sm="6" md="3">
+            <v-select
+              v-model="filters.market"
+              :items="[{ title: '全部', value: '' }, ...MARKET_OPTIONS]"
+              label="市場"
+              variant="outlined"
+              density="compact"
+              hide-details
+              @update:model-value="
+                applyFilters();
+                loadAvailableYears();
+              "
+            />
+          </v-col>
+
+          <v-col sm="6" md="3">
             <StockSearch
               :ticker="filters.ticker"
               :name="filters.name"
+              :market="filters.market || DEFAULT_MARKET"
               placeholder="輸入代號或名稱搜尋"
               @update:ticker="
                 filters.ticker = $event;
@@ -421,16 +465,17 @@ onMounted(() => {
               @update:model-value="applyFilters"
             />
           </v-col>
-          <v-col sm="6" md="4">
+          <v-col cols="12" sm="6" md="auto" class="d-flex justify-end">
             <v-btn variant="outlined" @click="clearFilters">清除</v-btn>
           </v-col>
-          <v-col sm="6" md="4" class="flex">
-            <v-btn color="success" variant="outlined" @click="exportCsv" class="mr-2"
-              >匯出 CSV</v-btn
-            >
-            <v-btn color="info" variant="outlined" @click="triggerImport" :loading="import_loading"
-              >匯入 CSV</v-btn
-            >
+        </v-row>
+
+        <v-row class="mb-4">
+          <v-col cols="12" class="flex gap-2">
+            <v-btn color="success" variant="outlined" @click="exportCsv">匯出 CSV</v-btn>
+            <v-btn color="info" variant="outlined" @click="triggerImport" :loading="import_loading">
+              匯入 CSV
+            </v-btn>
             <input
               ref="file_input"
               type="file"
@@ -445,6 +490,7 @@ onMounted(() => {
           <thead>
             <tr class="bg-neutral-100">
               <th class="text-left font-medium text-neutral-500">發放日</th>
+              <th class="text-center font-medium text-neutral-500">市場</th>
               <th class="text-left font-medium text-neutral-500">商品</th>
               <th class="text-center font-medium text-neutral-500">類別</th>
               <th class="text-right font-medium text-neutral-500">基準日持有股數</th>
@@ -457,6 +503,11 @@ onMounted(() => {
           <tbody>
             <tr v-for="d in dividends" :key="d.id">
               <td>{{ formatDate(d.pay_date) }}</td>
+              <td class="text-center">
+                <v-chip :color="d.market === 'us' ? 'indigo' : 'teal'" size="small">
+                  {{ getMarketLabel(d.market) }}
+                </v-chip>
+              </td>
               <td>
                 <div class="font-bold">{{ d.ticker }}</div>
                 <div class="text-sm text-neutral-400">{{ d.name }}</div>
@@ -481,7 +532,7 @@ onMounted(() => {
               </td>
             </tr>
             <tr v-if="dividends.length === 0">
-              <td colspan="8" class="text-center text-neutral-400 pa-4">尚無股利紀錄</td>
+              <td colspan="9" class="text-center text-neutral-400 pa-4">尚無股利紀錄</td>
             </tr>
           </tbody>
         </v-table>

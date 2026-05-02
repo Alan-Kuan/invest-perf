@@ -1,6 +1,7 @@
 import { ref } from 'vue';
 
 import { generateId } from '../db';
+import { DEFAULT_MARKET, type Market } from '../utils/market';
 import { useDatabase } from './useDatabase';
 
 export interface Transaction {
@@ -8,6 +9,7 @@ export interface Transaction {
   date: string;
   ticker: string;
   name: string;
+  market: Market;
   type: 'buy' | 'sell';
   shares: number;
   price: number;
@@ -22,6 +24,7 @@ export interface TransactionInput {
   date: string;
   ticker: string;
   name: string;
+  market: Market;
   type: 'buy' | 'sell';
   shares: number;
   price: number;
@@ -34,6 +37,7 @@ export interface TransactionFilters {
   type?: string;
   start_date?: string;
   end_date?: string;
+  market?: Market | '';
   sort_order?: 'ASC' | 'DESC';
 }
 
@@ -55,6 +59,11 @@ export function useTransactions() {
     if (filters.type) {
       sql += ' AND type = ?';
       params.push(filters.type);
+    }
+
+    if (filters.market) {
+      sql += ' AND market = ?';
+      params.push(filters.market);
     }
 
     if (filters.start_date) {
@@ -88,13 +97,14 @@ export function useTransactions() {
     }
 
     execute(
-      `INSERT INTO transactions (id, date, ticker, name, type, shares, price, total, fee, tax, net_amount)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO transactions (id, date, ticker, name, market, type, shares, price, total, fee, tax, net_amount)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
         data.date,
         data.ticker,
         data.name || '',
+        data.market || DEFAULT_MARKET,
         data.type,
         data.shares,
         data.price,
@@ -122,11 +132,12 @@ export function useTransactions() {
     }
 
     execute(
-      `UPDATE transactions SET date=?, ticker=?, name=?, type=?, shares=?, price=?, total=?, fee=?, tax=?, net_amount=? WHERE id=?`,
+      `UPDATE transactions SET date=?, ticker=?, name=?, market=?, type=?, shares=?, price=?, total=?, fee=?, tax=?, net_amount=? WHERE id=?`,
       [
         data.date,
         data.ticker,
         data.name || '',
+        data.market || DEFAULT_MARKET,
         data.type,
         data.shares,
         data.price,

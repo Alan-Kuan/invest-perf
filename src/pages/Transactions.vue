@@ -6,6 +6,13 @@ import { useDatabase } from '../composables/useDatabase';
 import { useStockList } from '../composables/useStockList';
 import { useTransactions, type TransactionInput } from '../composables/useTransactions';
 import { exportToCsv, parseCsv } from '../utils/csv';
+import {
+  DEFAULT_MARKET,
+  getMarketLabel,
+  MARKET_OPTIONS,
+  normalizeMarket,
+  type Market,
+} from '../utils/market';
 
 const { is_ready } = useDatabase();
 const { transactions, loadTransactions, addTransaction, deleteTransaction } = useTransactions();
@@ -19,7 +26,7 @@ const updating_stocks = ref(false);
 
 async function updateStockList() {
   updating_stocks.value = true;
-  await loadStockList();
+  await Promise.all([loadStockList('tw', true), loadStockList('us', true)]);
   updating_stocks.value = false;
   showSnackbar?.('已更新商品代號資料庫');
 }
@@ -27,6 +34,7 @@ async function updateStockList() {
 function exportCsv() {
   const data = transactions.value.map(t => ({
     日期: t.date,
+    市場: getMarketLabel(t.market),
     代號: t.ticker,
     名稱: t.name,
     交易別: t.type === 'buy' ? '買進' : '賣出',
@@ -58,6 +66,7 @@ async function handleFileImport(event: Event) {
     let imported = 0;
     for (const row of rows) {
       const date = row['日期'] || row['date'];
+      const market = normalizeMarket(row['市場'] || row['market']);
       const ticker = row['代號'] || row['ticker'];
       const type = row['交易別'] || row['type'];
       const shares = parseInt(row['股數'] || row['shares']);
@@ -70,6 +79,7 @@ async function handleFileImport(event: Event) {
           date,
           ticker,
           name: row['名稱'] || row['name'] || '',
+          market,
           type: type === '買進' || type === 'buy' ? 'buy' : 'sell',
           shares,
           price,
@@ -108,6 +118,7 @@ function formatDateToString(date: Date | string): string {
 interface TransactionForm {
   date: string;
   date_picker: string;
+  market: Market;
   ticker: string;
   name: string;
   type: 'buy' | 'sell';
@@ -120,6 +131,7 @@ interface TransactionForm {
 const form = ref<TransactionForm>({
   date: formatDateToString(new Date()),
   date_picker: formatDateToString(new Date()),
+  market: DEFAULT_MARKET,
   ticker: '',
   name: '',
   type: 'buy',
@@ -132,6 +144,9 @@ const form = ref<TransactionForm>({
 const date_menu = ref(false);
 const start_date_menu = ref(false);
 const end_date_menu = ref(false);
+const fee_manually_edited = ref(false);
+
+const DEFAULT_TW_FEE_RATE = 0.001425;
 
 function updateFormDate(val: Date | string) {
   if (!val) return;
@@ -157,7 +172,47 @@ function adjustShares(delta: number) {
   }
 }
 
+function getDefaultFee(): number {
+  if (form.value.market === 'us') {
+    return 0;
+  }
+
+  const total = computed_total.value;
+  if (total <= 0) {
+    return 0;
+  }
+
+  return Math.round(total * DEFAULT_TW_FEE_RATE);
+}
+
+function syncDefaultFee() {
+  if (!fee_manually_edited.value) {
+    form.value.fee = String(getDefaultFee());
+  }
+}
+
+const share_step_labels = computed(() => {
+  return form.value.market === 'us'
+    ? {
+        major_plus: '+10',
+        major_minus: '-10',
+        minor_plus: '+1',
+        minor_minus: '-1',
+        major_step: 10,
+        minor_step: 1,
+      }
+    : {
+        major_plus: '+1K',
+        major_minus: '-1K',
+        minor_plus: '+100',
+        minor_minus: '-100',
+        major_step: 1000,
+        minor_step: 100,
+      };
+});
+
 interface TransactionFilters {
+  market: Market | '';
   ticker: string;
   name: string;
   type: string;
@@ -168,6 +223,7 @@ interface TransactionFilters {
 }
 
 const filters = ref<TransactionFilters>({
+  market: '',
   ticker: '',
   name: '',
   type: '',
@@ -229,6 +285,22 @@ const computed_net_amount = computed(() => {
   }
 });
 
+watch(
+  () => [form.value.market, form.value.shares, form.value.price],
+  () => {
+    syncDefaultFee();
+  },
+  { immediate: true },
+);
+
+watch(
+  () => form.value.market,
+  () => {
+    fee_manually_edited.value = false;
+    syncDefaultFee();
+  },
+);
+
 function submitForm() {
   if (!form.value.date || !form.value.ticker || !form.value.shares || !form.value.price) {
     showSnackbar?.('請填寫必填欄位', 'warning');
@@ -239,6 +311,7 @@ function submitForm() {
     date: form.value.date,
     ticker: form.value.ticker,
     name: form.value.name,
+    market: form.value.market,
     type: form.value.type,
     shares: parseInt(form.value.shares),
     price: parseFloat(form.value.price),
@@ -249,6 +322,7 @@ function submitForm() {
   form.value = {
     date: formatDateToString(new Date()),
     date_picker: formatDateToString(new Date()),
+    market: DEFAULT_MARKET,
     ticker: '',
     name: '',
     type: 'buy',
@@ -257,6 +331,7 @@ function submitForm() {
     fee: '',
     tax: '',
   };
+  fee_manually_edited.value = false;
 
   loadTransactions(filters.value);
 }
@@ -267,6 +342,7 @@ function applyFilters() {
 
 function clearFilters() {
   filters.value = {
+    market: '',
     ticker: '',
     name: '',
     type: '',
@@ -295,7 +371,10 @@ watch(
 );
 
 onMounted(async () => {
-  await loadStockList();
+  await loadStockList(form.value.market);
+  if (filters.value.market) {
+    await loadStockList(filters.value.market);
+  }
 });
 </script>
 
@@ -340,9 +419,20 @@ onMounted(async () => {
             </v-col>
 
             <v-col cols="12" sm="6" md="3">
+              <v-select
+                v-model="form.market"
+                :items="MARKET_OPTIONS"
+                label="市場"
+                variant="outlined"
+                density="compact"
+              />
+            </v-col>
+
+            <v-col cols="12" sm="6" md="3">
               <StockSearch
                 :ticker="form.ticker"
                 :name="form.name"
+                :market="form.market"
                 placeholder="輸入代號或名稱搜尋"
                 @update:ticker="form.ticker = $event"
                 @update:name="form.name = $event"
@@ -374,22 +464,38 @@ onMounted(async () => {
               >
                 <template #append-inner>
                   <div class="flex">
-                    <v-btn size="small" class="text-rise" variant="text" @click="adjustShares(1000)"
-                      >+1K</v-btn
+                    <v-btn
+                      size="small"
+                      class="text-rise"
+                      variant="text"
+                      @click="adjustShares(share_step_labels.major_step)"
                     >
-                    <v-btn size="small" class="text-rise" variant="text" @click="adjustShares(100)"
-                      >+100</v-btn
+                      {{ share_step_labels.major_plus }}
+                    </v-btn>
+                    <v-btn
+                      size="small"
+                      class="text-rise"
+                      variant="text"
+                      @click="adjustShares(share_step_labels.minor_step)"
                     >
+                      {{ share_step_labels.minor_plus }}
+                    </v-btn>
                     <v-btn
                       size="small"
                       class="text-fall"
                       variant="text"
-                      @click="adjustShares(-1000)"
-                      >-1K</v-btn
+                      @click="adjustShares(-share_step_labels.major_step)"
                     >
-                    <v-btn size="small" class="text-fall" variant="text" @click="adjustShares(-100)"
-                      >-100</v-btn
+                      {{ share_step_labels.major_minus }}
+                    </v-btn>
+                    <v-btn
+                      size="small"
+                      class="text-fall"
+                      variant="text"
+                      @click="adjustShares(-share_step_labels.minor_step)"
                     >
+                      {{ share_step_labels.minor_minus }}
+                    </v-btn>
                   </div>
                 </template>
               </v-text-field>
@@ -424,6 +530,7 @@ onMounted(async () => {
                 type="number"
                 variant="outlined"
                 density="compact"
+                @update:model-value="fee_manually_edited = true"
               />
             </v-col>
 
@@ -470,9 +577,22 @@ onMounted(async () => {
       <v-card-text>
         <v-row class="mb-4" align="center">
           <v-col cols="12" sm="6" md="3">
+            <v-select
+              v-model="filters.market"
+              :items="[{ title: '全部', value: '' }, ...MARKET_OPTIONS]"
+              label="市場"
+              variant="outlined"
+              density="compact"
+              hide-details
+              @update:model-value="applyFilters"
+            />
+          </v-col>
+
+          <v-col cols="12" sm="6" md="3">
             <StockSearch
               :ticker="filters.ticker"
               :name="filters.name"
+              :market="filters.market || DEFAULT_MARKET"
               placeholder="輸入代號或名稱搜尋"
               @update:ticker="
                 filters.ticker = $event;
@@ -536,16 +656,17 @@ onMounted(async () => {
               </v-date-picker>
             </v-menu>
           </v-col>
-          <v-col cols="12" sm="6" md="2">
+          <v-col cols="12" sm="6" md="auto" class="d-flex justify-end">
             <v-btn variant="outlined" @click="clearFilters">清除</v-btn>
           </v-col>
-          <v-col cols="12" sm="6" md="4" class="flex">
-            <v-btn color="success" variant="outlined" @click="exportCsv" class="mr-2"
-              >匯出 CSV</v-btn
-            >
-            <v-btn color="info" variant="outlined" @click="triggerImport" :loading="import_loading"
-              >匯入 CSV</v-btn
-            >
+        </v-row>
+
+        <v-row class="mb-4">
+          <v-col cols="12" class="flex gap-2">
+            <v-btn color="success" variant="outlined" @click="exportCsv">匯出 CSV</v-btn>
+            <v-btn color="info" variant="outlined" @click="triggerImport" :loading="import_loading">
+              匯入 CSV
+            </v-btn>
             <input
               ref="file_input"
               type="file"
@@ -560,6 +681,7 @@ onMounted(async () => {
           <thead>
             <tr class="bg-neutral-100">
               <th class="text-left font-medium text-neutral-500">成交日期</th>
+              <th class="text-center font-medium text-neutral-500">市場</th>
               <th class="text-left font-medium text-neutral-500">商品</th>
               <th class="text-center font-medium text-neutral-500">交易別</th>
               <th class="text-right font-medium text-neutral-500">股數</th>
@@ -574,6 +696,11 @@ onMounted(async () => {
           <tbody>
             <tr v-for="t in transactions" :key="t.id">
               <td>{{ formatDate(t.date) }}</td>
+              <td class="text-center">
+                <v-chip :color="t.market === 'us' ? 'indigo' : 'teal'" size="small">
+                  {{ getMarketLabel(t.market) }}
+                </v-chip>
+              </td>
               <td>
                 <div class="font-bold">{{ t.ticker }}</div>
                 <div class="text-sm text-neutral-400">{{ t.name }}</div>
@@ -608,7 +735,7 @@ onMounted(async () => {
               </td>
             </tr>
             <tr v-if="transactions.length === 0">
-              <td colspan="10" class="text-center text-neutral-400 pa-4">尚無交易紀錄</td>
+              <td colspan="11" class="text-center text-neutral-400 pa-4">尚無交易紀錄</td>
             </tr>
           </tbody>
         </v-table>

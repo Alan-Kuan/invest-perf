@@ -9,6 +9,59 @@ const IDB_VERSION = 7;
 
 let idb_instance: IDBDatabase | null = null;
 
+function tableExists(table_name: string): boolean {
+  if (!db) return false;
+
+  const result = db.exec(
+    `SELECT name FROM sqlite_master WHERE type = 'table' AND name = '${table_name}'`,
+  );
+
+  return result.length > 0 && result[0].values.length > 0;
+}
+
+function columnExists(table_name: string, column_name: string): boolean {
+  if (!db || !tableExists(table_name)) return false;
+
+  const result = db.exec(`PRAGMA table_info(${table_name})`);
+  if (result.length === 0) return false;
+
+  return result[0].values.some(row => String(row[1]) === column_name);
+}
+
+function ensureMarketColumn(table_name: string): void {
+  if (!db) return;
+
+  if (!columnExists(table_name, 'market')) {
+    db.run(`ALTER TABLE ${table_name} ADD COLUMN market TEXT NOT NULL DEFAULT 'tw'`);
+  }
+
+  db.run(`UPDATE ${table_name} SET market = 'tw' WHERE market IS NULL OR market = ''`);
+}
+
+function migrateHistoricalPricesTable(): void {
+  if (!db || !tableExists('historical_prices')) return;
+
+  if (!columnExists('historical_prices', 'market')) {
+    db.run('ALTER TABLE historical_prices RENAME TO historical_prices_legacy');
+    db.run(`
+      CREATE TABLE IF NOT EXISTS historical_prices (
+        market TEXT NOT NULL DEFAULT 'tw',
+        ticker TEXT NOT NULL,
+        date TEXT NOT NULL,
+        price REAL NOT NULL,
+        updated_at TEXT DEFAULT (datetime('now')),
+        PRIMARY KEY (market, ticker, date)
+      )
+    `);
+    db.run(`
+      INSERT INTO historical_prices (market, ticker, date, price, updated_at)
+      SELECT 'tw', ticker, date, price, updated_at
+      FROM historical_prices_legacy
+    `);
+    db.run('DROP TABLE historical_prices_legacy');
+  }
+}
+
 function openIndexedDB(): Promise<IDBDatabase> {
   if (idb_instance) return Promise.resolve(idb_instance);
 
@@ -77,6 +130,7 @@ export async function initDatabase(): Promise<Database> {
   }
 
   createTables();
+  await saveDatabase();
 
   return db;
 }
@@ -90,6 +144,7 @@ function createTables(): void {
       date TEXT NOT NULL,
       ticker TEXT NOT NULL,
       name TEXT,
+      market TEXT NOT NULL DEFAULT 'tw',
       type TEXT NOT NULL CHECK(type IN ('buy', 'sell')),
       shares INTEGER NOT NULL,
       price REAL NOT NULL,
@@ -107,6 +162,7 @@ function createTables(): void {
       pay_date TEXT NOT NULL,
       ticker TEXT NOT NULL,
       name TEXT,
+      market TEXT NOT NULL DEFAULT 'tw',
       category TEXT NOT NULL CHECK(category IN ('cash', 'stock')),
       shares INTEGER NOT NULL,
       per_share REAL NOT NULL,
@@ -118,19 +174,27 @@ function createTables(): void {
 
   db.run(`
     CREATE TABLE IF NOT EXISTS historical_prices (
+      market TEXT NOT NULL DEFAULT 'tw',
       ticker TEXT NOT NULL,
       date TEXT NOT NULL,
       price REAL NOT NULL,
       updated_at TEXT DEFAULT (datetime('now')),
-      PRIMARY KEY (ticker, date)
+      PRIMARY KEY (market, ticker, date)
     )
   `);
 
+  ensureMarketColumn('transactions');
+  ensureMarketColumn('dividends');
+  migrateHistoricalPricesTable();
+
   db.run(`CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions(date)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_transactions_ticker ON transactions(ticker)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_transactions_market ON transactions(market)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_dividends_date ON dividends(pay_date)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_dividends_ticker ON dividends(ticker)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_dividends_market ON dividends(market)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_historical_prices_ticker ON historical_prices(ticker)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_historical_prices_market ON historical_prices(market)`);
 }
 
 export async function saveDatabase(): Promise<void> {
@@ -162,5 +226,6 @@ export async function exportDatabase(): Promise<Uint8Array | null> {
 export async function importDatabase(uint8Array: Uint8Array): Promise<void> {
   const sql_js = await initSqlJs();
   db = new sql_js.Database(uint8Array);
+  createTables();
   await saveDatabase();
 }

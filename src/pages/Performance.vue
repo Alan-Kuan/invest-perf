@@ -12,14 +12,13 @@ import {
   Filler,
 } from 'chart.js';
 import katex from 'katex';
-import { ref, watch, computed } from 'vue';
+import { ref, watch } from 'vue';
 import { Bar, Line } from 'vue-chartjs';
 
 import { useDatabase } from '../composables/useDatabase';
-import { useDividends } from '../composables/useDividends';
 import { usePortfolio } from '../composables/usePortfolio';
 import { useStockPrice } from '../composables/useStockPrice';
-import { useTransactions } from '../composables/useTransactions';
+import { MARKET_OPTIONS, type Market } from '../utils/market';
 
 ChartJS.register(
   CategoryScale,
@@ -34,12 +33,14 @@ ChartJS.register(
 );
 
 const { is_ready, query } = useDatabase();
-const { transactions, loadTransactions } = useTransactions();
-const { dividends, loadDividends } = useDividends();
-const { getPortfolioSummary } = usePortfolio();
-const { fetchHistoricalPrice } = useStockPrice();
+const { getPortfolioSummary, updateCurrPricesCache } = usePortfolio();
+const { fetchHistoricalPrice, fetchPricesBatch } = useStockPrice();
 
 const is_loading = ref(false);
+const is_loading_market = ref<Record<Market, boolean>>({
+  tw: false,
+  us: false,
+});
 
 interface PerformanceStats {
   realized_gain: number;
@@ -52,17 +53,6 @@ interface PerformanceStats {
   lose_count: number;
 }
 
-const stats = ref<PerformanceStats>({
-  realized_gain: 0,
-  unrealized_gain: 0,
-  total_dividend: 0,
-  total_return: 0,
-  buy_count: 0,
-  sell_count: 0,
-  win_count: 0,
-  lose_count: 0,
-});
-
 interface AnnualData {
   year: number;
   realized_return_rate: number;
@@ -71,24 +61,60 @@ interface AnnualData {
   total_gain: number;
 }
 
-const annual_performance = ref<AnnualData[]>([]);
+const stats = ref<Record<Market, PerformanceStats>>({
+  tw: createEmptyStats(),
+  us: createEmptyStats(),
+});
+
+const annual_performance = ref<Record<Market, AnnualData[]>>({
+  tw: [],
+  us: [],
+});
+
+const performance_formula_items = [
+  {
+    label: '年度報酬率計算方式',
+    lines: [
+      '\\text{加權投入資本} = \\text{年初部位淨值} + \\sum (\\text{買入金額} \\times \\text{剩餘年度權重}) - \\sum (\\text{賣出金額} \\times \\text{剩餘年度權重})',
+      '\\text{年末持股淨值} = \\sum (\\text{年末收盤價} \\times \\text{剩餘持股}) \\times (1 - \\text{手續費率} - \\text{交易稅率})',
+      '\\text{已實現報酬率} = \\dfrac{\\text{已實現損益} + \\text{股利收入}}{\\text{加權投入資本}} \\times 100\\%',
+      '\\text{未實現報酬率} = \\dfrac{\\text{年末持股淨值} - \\text{年末剩餘成本}}{\\text{加權投入資本}} \\times 100\\%',
+      '\\text{總報酬率} = \\dfrac{\\text{已實現損益} + \\text{股利收入} + \\text{未實現損益}}{\\text{加權投入資本}} \\times 100\\%',
+    ],
+    notes: [
+      '採用現金流加權的年度報酬率，接近 Modified Dietz 的年度算法',
+      '購買手續費會記入成本，賣出手續費和交易稅會從收入與年末淨值扣除',
+      '剩餘股票以當年年末估算淨值結轉到隔年繼續計算',
+    ],
+  },
+  {
+    label: '年度累積損益計算方式',
+    lines: [],
+    notes: ['顯示每一年結束時的累積損益金額'],
+  },
+] as const;
 
 interface YearlyHolding {
   shares: number;
   carry_cost: number;
 }
 
-interface YearlyTransactionGroup {
-  [year: number]: ReturnType<typeof loadTransactions>;
+function createEmptyStats(): PerformanceStats {
+  return {
+    realized_gain: 0,
+    unrealized_gain: 0,
+    total_dividend: 0,
+    total_return: 0,
+    buy_count: 0,
+    sell_count: 0,
+    win_count: 0,
+    lose_count: 0,
+  };
 }
 
-interface YearlyDividendGroup {
-  [year: number]: number;
-}
-
-function getSaleCostRate(ticker: string): number {
+function getSaleCostRate(market: Market, ticker: string): number {
   const fee_rate = 0.001425;
-  const tax_rate = ticker.startsWith('00') ? 0.001 : 0.003;
+  const tax_rate = market === 'tw' ? (ticker.startsWith('00') ? 0.001 : 0.003) : 0;
   return 1 - fee_rate - tax_rate;
 }
 
@@ -101,7 +127,6 @@ function getYearBounds(
 } {
   const start_date = `${year}-01-01`;
   const end_date = year === current_year ? new Date().toISOString().split('T')[0] : `${year}-12-31`;
-
   return { start_date, end_date };
 }
 
@@ -118,70 +143,184 @@ function getRemainingWeight(date: string, start_date: string, end_date: string):
   return (total_days - elapsed_days) / total_days;
 }
 
-function groupTransactionsByYear(): YearlyTransactionGroup {
-  const grouped: YearlyTransactionGroup = {};
+function groupTransactionsByYear(transactions: any[]): Record<number, any[]> {
+  const grouped: Record<number, any[]> = {};
 
-  for (const transaction of transactions.value) {
+  for (const transaction of transactions) {
     const year = parseInt(transaction.date.substring(0, 4));
-
     if (!grouped[year]) {
       grouped[year] = [];
     }
-
     grouped[year].push(transaction);
   }
 
   return grouped;
 }
 
-function groupDividendsByYear(): YearlyDividendGroup {
-  const grouped: YearlyDividendGroup = {};
+function groupDividendsByYear(dividends: any[]): Record<number, number> {
+  const grouped: Record<number, number> = {};
 
-  for (const dividend of dividends.value) {
+  for (const dividend of dividends) {
     const year = parseInt(dividend.pay_date.substring(0, 4));
-
     if (!grouped[year]) {
       grouped[year] = 0;
     }
-
     grouped[year] += dividend.amount;
   }
 
   return grouped;
 }
 
-async function loadStats() {
-  loadTransactions({ sort_order: 'ASC' });
-  loadDividends({ sort_order: 'ASC' });
-
-  const summary = getPortfolioSummary();
-
-  stats.value.realized_gain = summary.realized_gain;
-  stats.value.unrealized_gain = summary.unrealized_gain;
-  stats.value.total_dividend = dividends.value.reduce((sum, d) => sum + d.amount, 0);
-  stats.value.total_return =
-    summary.realized_gain + stats.value.total_dividend + summary.unrealized_gain;
-  stats.value.buy_count = transactions.value.filter(t => t.type === 'buy').length;
-  stats.value.sell_count = transactions.value.filter(t => t.type === 'sell').length;
-
-  await checkAndRecalculate();
+function getPerformanceChartData(market: Market): any {
+  const data = annual_performance.value[market];
+  return {
+    labels: data.map(item => item.year),
+    datasets: [
+      {
+        label: '總報酬率',
+        data: data.map(item => item.total_return_rate * 100),
+        type: 'line' as const,
+        borderColor: '#16448c',
+        backgroundColor: 'transparent',
+        pointBackgroundColor: '#16448c',
+        tension: 0.3,
+        order: 1,
+      },
+      {
+        label: '已實現報酬率',
+        data: data.map(item => item.realized_return_rate * 100),
+        backgroundColor: '#2196f3',
+        borderRadius: 4,
+        barPercentage: 0.6,
+        stack: `return_rate_${market}`,
+        order: 2,
+      },
+      {
+        label: '未實現報酬率',
+        data: data.map(item => item.unrealized_return_rate * 100),
+        backgroundColor: '#87cefa',
+        borderRadius: 4,
+        barPercentage: 0.6,
+        stack: `return_rate_${market}`,
+        order: 2,
+      },
+    ],
+  };
 }
 
-async function handleRefresh() {
-  is_loading.value = true;
-  await loadAnnualPerformance();
-  is_loading.value = false;
+function getCumulativeChartData(market: Market) {
+  const data = annual_performance.value[market];
+  const cumulative_data: number[] = [];
+  let running_total = 0;
+
+  for (const item of data) {
+    running_total += item.total_gain;
+    cumulative_data.push(running_total);
+  }
+
+  return {
+    labels: data.map(item => item.year),
+    datasets: [
+      {
+        label: '累積損益',
+        data: cumulative_data,
+        borderColor: '#9c27b0',
+        backgroundColor: 'rgba(156, 39, 176, 0.1)',
+        fill: true,
+        tension: 0.3,
+      },
+    ],
+  };
 }
 
-async function loadAnnualPerformance() {
-  if (transactions.value.length === 0) return;
+function getPerformanceChartOptions() {
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'bottom' as const,
+      },
+      tooltip: {
+        callbacks: {
+          label: (context: any) => [`${context.dataset.label}: ${context.raw?.toFixed(2)}%`],
+        },
+      },
+    },
+    scales: {
+      x: {
+        grid: {
+          display: false,
+        },
+        stacked: true,
+      },
+      y: {
+        stacked: true,
+        ticks: {
+          callback: (value: number | string) => Number(value).toFixed(1) + '%',
+        },
+      },
+    },
+  };
+}
 
-  const first_year = parseInt(transactions.value[0].date.substring(0, 4));
-  const current_year = parseInt(new Date().getFullYear().toString());
+function getCumulativeChartOptions() {
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'bottom' as const,
+      },
+      tooltip: {
+        callbacks: {
+          label: (context: any) => {
+            const value = context.raw ?? 0;
+            const prefix = value >= 0 ? '+' : '';
+            return [`${context.dataset.label}: ${prefix}${Number(value).toLocaleString()}`];
+          },
+        },
+      },
+    },
+    scales: {
+      x: {
+        grid: {
+          display: false,
+        },
+      },
+      y: {
+        ticks: {
+          callback: (value: number | string) => {
+            const v = Number(value);
+            return v >= 0 ? '+' + v.toLocaleString() : v.toLocaleString();
+          },
+        },
+      },
+    },
+  };
+}
+
+async function loadAnnualPerformanceForMarket(market: Market): Promise<void> {
+  const transactions = query(
+    'SELECT * FROM transactions WHERE market = ? ORDER BY date ASC, created_at ASC, id ASC',
+    [market],
+  ) as any[];
+  const dividends = query(
+    'SELECT * FROM dividends WHERE market = ? ORDER BY pay_date ASC, created_at ASC, id ASC',
+    [market],
+  ) as any[];
+
+  if (transactions.length === 0) {
+    annual_performance.value[market] = [];
+    return;
+  }
+
+  const first_year = parseInt(transactions[0].date.substring(0, 4));
+  const current_year = new Date().getFullYear();
+  const transactions_by_year = groupTransactionsByYear(transactions);
+  const dividends_by_year = groupDividendsByYear(dividends);
   const annual_data_list: AnnualData[] = [];
-  const transactions_by_year = groupTransactionsByYear();
-  const dividends_by_year = groupDividendsByYear();
-  let carry_holdings = new Map<string, YearlyHolding>();
+  const carry_holdings = new Map<string, YearlyHolding>();
 
   for (let year = first_year; year <= current_year; year++) {
     const { start_date, end_date } = getYearBounds(year, current_year);
@@ -242,8 +381,8 @@ async function loadAnnualPerformance() {
     for (const [ticker, holding] of carry_holdings) {
       if (holding.shares <= 0) continue;
 
-      const end_price = (await fetchHistoricalPrice(ticker, end_date)) || 0;
-      const end_value = holding.shares * end_price * getSaleCostRate(ticker);
+      const end_price = (await fetchHistoricalPrice(ticker, end_date, market)) || 0;
+      const end_value = holding.shares * end_price * getSaleCostRate(market, ticker);
 
       total_unrealized_gain += end_value - holding.carry_cost;
       holding.carry_cost = end_value;
@@ -252,21 +391,18 @@ async function loadAnnualPerformance() {
     const invested_capital = beginning_value + weighted_cash_flow;
     const realized_component = total_realized_gain + dividend_income;
     const total_gain = realized_component + total_unrealized_gain;
-    const realized_return_rate = realized_component / invested_capital;
-    const unrealized_return_rate = total_unrealized_gain / invested_capital;
-    const total_return_rate = total_gain / invested_capital;
 
     annual_data_list.push({
       year,
-      realized_return_rate,
-      unrealized_return_rate,
-      total_return_rate,
+      realized_return_rate: invested_capital > 0 ? realized_component / invested_capital : 0,
+      unrealized_return_rate: invested_capital > 0 ? total_unrealized_gain / invested_capital : 0,
+      total_return_rate: invested_capital > 0 ? total_gain / invested_capital : 0,
       total_gain,
     });
   }
 
-  annual_performance.value = annual_data_list;
-  saveAnnualPerformanceCache(annual_performance.value);
+  annual_performance.value[market] = annual_data_list;
+  saveAnnualPerformanceCache(market, annual_data_list);
 }
 
 interface AnnualDataCache {
@@ -274,177 +410,120 @@ interface AnnualDataCache {
   calculated_at: string;
 }
 
-function saveAnnualPerformanceCache(data: AnnualData[]) {
+function getAnnualPerformanceCacheKey(market: Market): string {
+  return `annual_performance_cache_${market}`;
+}
+
+function saveAnnualPerformanceCache(market: Market, data: AnnualData[]): void {
   const cache: AnnualDataCache = {
     data,
     calculated_at: new Date().toISOString().split('T')[0],
   };
-  localStorage.setItem('annual_performance_cache', JSON.stringify(cache));
+  localStorage.setItem(getAnnualPerformanceCacheKey(market), JSON.stringify(cache));
+  if (market === 'tw') {
+    localStorage.setItem('annual_performance_cache', JSON.stringify(cache));
+  }
 }
 
-async function checkAndRecalculate(): Promise<void> {
-  const stored = localStorage.getItem('annual_performance_cache');
-  const cached = stored ? (JSON.parse(stored) as AnnualDataCache) : null;
+async function checkAndRecalculate(market: Market): Promise<void> {
+  const stored = localStorage.getItem(getAnnualPerformanceCacheKey(market));
+  const legacy_stored = market === 'tw' ? localStorage.getItem('annual_performance_cache') : null;
+  const cached = stored
+    ? (JSON.parse(stored) as AnnualDataCache)
+    : legacy_stored
+      ? (JSON.parse(legacy_stored) as AnnualDataCache)
+      : null;
 
-  const latest_transaction = query('SELECT MAX(date) as max_date FROM transactions') as {
-    max_date: string;
-  }[];
-  const latest_dividend = query('SELECT MAX(pay_date) as max_date FROM dividends') as {
-    max_date: string;
-  }[];
+  const latest_transaction = query(
+    'SELECT MAX(date) as max_date FROM transactions WHERE market = ?',
+    [market],
+  ) as { max_date: string }[];
+  const latest_dividend = query(
+    'SELECT MAX(pay_date) as max_date FROM dividends WHERE market = ?',
+    [market],
+  ) as { max_date: string }[];
 
   const latest_data_date = latest_transaction[0]?.max_date || '';
   const latest_dividend_date = latest_dividend[0]?.max_date || '';
 
-  let need_recalculate = false;
-
   if (!cached) {
-    need_recalculate = true;
-  } else if (
-    latest_data_date > cached.calculated_at ||
-    latest_dividend_date > cached.calculated_at
-  ) {
-    need_recalculate = true;
+    await loadAnnualPerformanceForMarket(market);
+    return;
   }
 
-  if (need_recalculate) {
-    await loadAnnualPerformance();
-  } else if (cached) {
-    annual_performance.value = cached.data;
+  if (latest_data_date > cached.calculated_at || latest_dividend_date > cached.calculated_at) {
+    await loadAnnualPerformanceForMarket(market);
+    return;
+  }
+
+  annual_performance.value[market] = cached.data;
+}
+
+async function loadStatsForMarket(market: Market): Promise<void> {
+  let summary = getPortfolioSummary(market);
+  if (summary.holdings.length > 0) {
+    const current_prices = await fetchPricesBatch(
+      summary.holdings.map(holding => holding.ticker),
+      market,
+    );
+    updateCurrPricesCache(market, current_prices);
+    summary = getPortfolioSummary(market);
+  }
+
+  const dividends = query(
+    'SELECT * FROM dividends WHERE market = ? ORDER BY pay_date ASC, created_at ASC, id ASC',
+    [market],
+  ) as any[];
+  const total_dividend = dividends.reduce((sum, dividend) => sum + dividend.amount, 0);
+  const buy_count_result = query(
+    'SELECT COUNT(*) as count FROM transactions WHERE market = ? AND type = ?',
+    [market, 'buy'],
+  )[0]?.count;
+  const sell_count_result = query(
+    'SELECT COUNT(*) as count FROM transactions WHERE market = ? AND type = ?',
+    [market, 'sell'],
+  )[0]?.count;
+
+  stats.value[market] = {
+    realized_gain: summary.realized_gain,
+    unrealized_gain: summary.unrealized_gain,
+    total_dividend,
+    total_return: summary.realized_gain + total_dividend + summary.unrealized_gain,
+    buy_count: Number(buy_count_result || 0),
+    sell_count: Number(sell_count_result || 0),
+    win_count: 0,
+    lose_count: 0,
+  };
+
+  await checkAndRecalculate(market);
+}
+
+async function refreshMarketData(market: Market): Promise<void> {
+  is_loading_market.value[market] = true;
+  try {
+    await loadStatsForMarket(market);
+  } finally {
+    is_loading_market.value[market] = false;
   }
 }
 
-const performance_chart_data = computed(() => {
-  return {
-    labels: annual_performance.value.map(a => a.year),
-    datasets: [
-      {
-        label: '總報酬率',
-        data: annual_performance.value.map(a => a.total_return_rate * 100),
-        type: 'line' as const,
-        borderColor: '#16448c',
-        backgroundColor: 'transparent',
-        pointBackgroundColor: '#16448c',
-        tension: 0.3,
-        order: 1,
-      },
-      {
-        label: '已實現報酬率',
-        data: annual_performance.value.map(a => a.realized_return_rate * 100),
-        backgroundColor: '#2196f3',
-        borderRadius: 4,
-        barPercentage: 0.6,
-        stack: 'return_rate',
-        order: 2,
-      },
-      {
-        label: '未實現報酬率',
-        data: annual_performance.value.map(a => a.unrealized_return_rate * 100),
-        backgroundColor: '#87cefa',
-        borderRadius: 4,
-        barPercentage: 0.6,
-        stack: 'return_rate',
-        order: 2,
-      },
-    ],
-  } as any;
-});
-
-const cumulative_chart_data = computed(() => {
-  const cumulative_data: number[] = [];
-  let running_total = 0;
-
-  for (const a of annual_performance.value) {
-    running_total += a.total_gain;
-    cumulative_data.push(running_total);
+async function refreshAllMarkets(): Promise<void> {
+  for (const market of ['tw', 'us'] as Market[]) {
+    await refreshMarketData(market);
   }
-
-  return {
-    labels: annual_performance.value.map(a => a.year),
-    datasets: [
-      {
-        label: '累積損益',
-        data: cumulative_data,
-        borderColor: '#9c27b0',
-        backgroundColor: 'rgba(156, 39, 176, 0.1)',
-        fill: true,
-        tension: 0.3,
-      },
-    ],
-  };
-});
-
-const performance_chart_options = {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: {
-    legend: {
-      position: 'bottom' as const,
-    },
-    tooltip: {
-      callbacks: {
-        label: (context: any) => {
-          return [`${context.dataset.label}: ${context.raw?.toFixed(2)}%`];
-        },
-      },
-    },
-  },
-  scales: {
-    x: {
-      grid: {
-        display: false,
-      },
-      stacked: true,
-    },
-    y: {
-      stacked: true,
-      ticks: {
-        callback: (value: number | string) => Number(value).toFixed(1) + '%',
-      },
-    },
-  },
-};
-
-const cumulative_chart_options = {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: {
-    legend: {
-      position: 'bottom' as const,
-    },
-    tooltip: {
-      callbacks: {
-        label: (context: any) => {
-          const value = context.raw ?? 0;
-          const prefix = value >= 0 ? '+' : '';
-          return [`${context.dataset.label}: ${prefix}${Number(value).toLocaleString()}`];
-        },
-      },
-    },
-  },
-  scales: {
-    x: {
-      grid: {
-        display: false,
-      },
-    },
-    y: {
-      ticks: {
-        callback: (value: number | string) => {
-          const v = Number(value);
-          return v >= 0 ? '+' + v.toLocaleString() : v.toLocaleString();
-        },
-      },
-    },
-  },
-};
+}
 
 watch(
   is_ready,
   async ready => {
     if (!ready) return;
-    loadStats();
-    await handleRefresh();
+
+    is_loading.value = true;
+    try {
+      await refreshAllMarkets();
+    } finally {
+      is_loading.value = false;
+    }
   },
   { immediate: true },
 );
@@ -454,190 +533,157 @@ watch(
   <div>
     <div class="flex items-center mb-4">
       <h2 class="text-2xl">投資績效</h2>
-      <v-btn
-        class="ml-auto"
-        variant="tonal"
-        size="small"
-        :loading="is_loading"
-        @click="handleRefresh"
-      >
-        重新計算
-      </v-btn>
     </div>
 
-    <v-row class="mb-4" align="stretch">
-      <v-col v-for="i in 5" :key="i" sm="6" md="4" lg="2" class="flex items-stretch">
-        <v-card class="rounded-lg w-full shadow-[0_2px_8px_rgba(0,0,0,0.08)]">
-          <v-card-text class="h-full">
-            <template v-if="i === 1">
+    <v-card class="mb-6 rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.08)]">
+      <v-expansion-panels variant="accordion" class="pa-0">
+        <v-expansion-panel :title="performance_formula_items[0].label">
+          <v-expansion-panel-text>
+            <div class="space-y-4">
+              <div
+                v-for="item in performance_formula_items[0].lines"
+                :key="item"
+                class="text-xs"
+                v-html="katex.renderToString(item, { throwOnError: false })"
+              />
+              <ul class="px-4 py-1 list-disc">
+                <li v-for="note in performance_formula_items[0].notes" :key="note" class="mt-1">
+                  {{ note }}
+                </li>
+              </ul>
+            </div>
+          </v-expansion-panel-text>
+        </v-expansion-panel>
+        <v-expansion-panel :title="performance_formula_items[1].label">
+          <v-expansion-panel-text>
+            <p class="px-4 py-1">顯示每一年結束時的累積總損益金額</p>
+          </v-expansion-panel-text>
+        </v-expansion-panel>
+      </v-expansion-panels>
+    </v-card>
+
+    <div v-for="market in MARKET_OPTIONS" :key="market.value" class="mb-10">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-xl font-medium">{{ market.title }}</h3>
+        <v-btn
+          variant="tonal"
+          size="small"
+          :loading="is_loading_market[market.value]"
+          @click="refreshMarketData(market.value)"
+        >
+          重新計算
+        </v-btn>
+      </div>
+
+      <v-row class="mb-4" align="stretch">
+        <v-col sm="6" md="4" lg="2" class="flex items-stretch">
+          <v-card class="rounded-lg w-full shadow-[0_2px_8px_rgba(0,0,0,0.08)]">
+            <v-card-text>
               <div class="text-neutral-400">已實現損益</div>
               <div
                 class="font-bold text-base"
-                :class="stats.realized_gain >= 0 ? 'text-rise' : 'text-fall'"
+                :class="stats[market.value].realized_gain >= 0 ? 'text-rise' : 'text-fall'"
               >
-                {{ stats.realized_gain >= 0 ? '+' : '' }}{{ stats.realized_gain.toLocaleString() }}
+                {{ stats[market.value].realized_gain >= 0 ? '+' : ''
+                }}{{ stats[market.value].realized_gain.toLocaleString() }}
               </div>
-            </template>
-            <template v-else-if="i === 2">
+            </v-card-text>
+          </v-card>
+        </v-col>
+        <v-col sm="6" md="4" lg="2" class="flex items-stretch">
+          <v-card class="rounded-lg w-full shadow-[0_2px_8px_rgba(0,0,0,0.08)]">
+            <v-card-text>
               <div class="text-neutral-400">未實現損益</div>
               <div
                 class="font-bold text-base"
-                :class="stats.unrealized_gain >= 0 ? 'text-rise' : 'text-fall'"
+                :class="stats[market.value].unrealized_gain >= 0 ? 'text-rise' : 'text-fall'"
               >
-                {{ stats.unrealized_gain >= 0 ? '+' : ''
-                }}{{ stats.unrealized_gain.toLocaleString() }}
+                {{ stats[market.value].unrealized_gain >= 0 ? '+' : ''
+                }}{{ stats[market.value].unrealized_gain.toLocaleString() }}
               </div>
-            </template>
-            <template v-else-if="i === 3">
+            </v-card-text>
+          </v-card>
+        </v-col>
+        <v-col sm="6" md="4" lg="2" class="flex items-stretch">
+          <v-card class="rounded-lg w-full shadow-[0_2px_8px_rgba(0,0,0,0.08)]">
+            <v-card-text>
               <div class="text-neutral-400">股利收入</div>
               <div class="font-bold text-base text-rise">
-                {{ stats.total_dividend.toLocaleString() }}
+                {{ stats[market.value].total_dividend.toLocaleString() }}
               </div>
-            </template>
-            <template v-else-if="i === 4">
+            </v-card-text>
+          </v-card>
+        </v-col>
+        <v-col sm="6" md="4" lg="2" class="flex items-stretch">
+          <v-card class="rounded-lg w-full shadow-[0_2px_8px_rgba(0,0,0,0.08)]">
+            <v-card-text>
               <div class="text-neutral-400">總損益</div>
               <div
                 class="font-bold text-base"
-                :class="stats.total_return >= 0 ? 'text-rise' : 'text-fall'"
+                :class="stats[market.value].total_return >= 0 ? 'text-rise' : 'text-fall'"
               >
-                {{ stats.total_return >= 0 ? '+' : '' }}{{ stats.total_return.toLocaleString() }}
+                {{ stats[market.value].total_return >= 0 ? '+' : ''
+                }}{{ stats[market.value].total_return.toLocaleString() }}
               </div>
-            </template>
-            <template v-else-if="i === 5">
+            </v-card-text>
+          </v-card>
+        </v-col>
+        <v-col sm="6" md="4" lg="2" class="flex items-stretch">
+          <v-card class="rounded-lg w-full shadow-[0_2px_8px_rgba(0,0,0,0.08)]">
+            <v-card-text>
               <div class="text-neutral-400">交易次數</div>
               <div class="font-bold text-base">
-                {{ stats.buy_count + stats.sell_count }}
+                {{ stats[market.value].buy_count + stats[market.value].sell_count }}
               </div>
               <div class="text-sm text-neutral-400">
-                {{ stats.buy_count }} 買 / {{ stats.sell_count }} 賣
+                {{ stats[market.value].buy_count }} 買 / {{ stats[market.value].sell_count }} 賣
               </div>
-            </template>
-          </v-card-text>
-        </v-card>
-      </v-col>
-    </v-row>
+            </v-card-text>
+          </v-card>
+        </v-col>
+      </v-row>
 
-    <v-row>
-      <v-col cols="12" md="6">
-        <v-card class="mb-4 rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.08)]">
-          <v-card-item>
-            <div class="flex items-center">
+      <v-row>
+        <v-col cols="12" md="6">
+          <v-card class="mb-4 rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.08)]">
+            <v-card-item>
               <span class="font-medium">年度報酬率</span>
-              <v-tooltip origin="start center" transition="scale-transition">
-                <template v-slot:activator="{ props }">
-                  <v-icon v-bind="props" size="small" class="ml-1" color="neutral-400">
-                    mdi-help-circle-outline
-                  </v-icon>
-                </template>
-                <ul class="px-4 py-2 list-disc">
-                  <li>
-                    <span
-                      class="text-xs"
-                      v-html="
-                        katex.renderToString(
-                          '\\text{加權投入資本} = \\text{年初部位淨值} + \\sum (\\text{買入金額} \\times \\text{剩餘年度權重}) - \\sum (\\text{賣出金額} \\times \\text{剩餘年度權重})',
-                          { throwOnError: false },
-                        )
-                      "
-                    />
-                  </li>
-                  <li class="mt-2">
-                    <span
-                      class="text-xs"
-                      v-html="
-                        katex.renderToString(
-                          '\\text{年末持股淨值} = \\sum (\\text{年末收盤價} \\times \\text{剩餘持股}) \\times (1 - \\text{手續費率} - \\text{交易稅率})',
-                          { throwOnError: false },
-                        )
-                      "
-                    />
-                  </li>
-                  <li class="mt-2">
-                    <span
-                      class="text-xs"
-                      v-html="
-                        katex.renderToString(
-                          '\\text{已實現報酬率} = \\dfrac{\\text{已實現損益} + \\text{股利收入}}{\\text{加權投入資本}} \\times 100\\%',
-                          { throwOnError: false },
-                        )
-                      "
-                    />
-                  </li>
-                  <li class="mt-2">
-                    <span
-                      class="text-xs"
-                      v-html="
-                        katex.renderToString(
-                          '\\text{未實現報酬率} = \\dfrac{\\text{年末持股淨值} - \\text{年末剩餘成本}}{\\text{加權投入資本}} \\times 100\\%',
-                          { throwOnError: false },
-                        )
-                      "
-                    />
-                  </li>
-                  <li class="mt-2">
-                    <span
-                      class="text-xs"
-                      v-html="
-                        katex.renderToString(
-                          '\\text{總報酬率} = \\dfrac{\\text{已實現損益} + \\text{股利收入} + \\text{未實現損益}}{\\text{加權投入資本}} \\times 100\\%',
-                          { throwOnError: false },
-                        )
-                      "
-                    />
-                  </li>
-                  <li class="mt-1">採用現金流加權的年度報酬率，接近 Modified Dietz 的年度算法</li>
-                  <li class="mt-1">
-                    購買手續費會記入成本，賣出手續費和交易稅會從收入與年末淨值扣除
-                  </li>
-                  <li class="mt-1">剩餘股票以當年年末估算淨值結轉到隔年繼續計算</li>
-                </ul>
-              </v-tooltip>
-            </div>
-          </v-card-item>
-          <v-card-text>
-            <div class="h-65">
-              <Bar
-                v-if="annual_performance.length > 0"
-                :data="performance_chart_data"
-                :options="performance_chart_options"
-              />
-              <div v-else class="flex items-center justify-center h-full text-neutral-400">
-                尚無資料
+            </v-card-item>
+            <v-card-text>
+              <div class="h-65">
+                <Bar
+                  v-if="annual_performance[market.value].length > 0"
+                  :data="getPerformanceChartData(market.value)"
+                  :options="getPerformanceChartOptions()"
+                />
+                <div v-else class="flex items-center justify-center h-full text-neutral-400">
+                  尚無資料
+                </div>
               </div>
-            </div>
-          </v-card-text>
-        </v-card>
-      </v-col>
+            </v-card-text>
+          </v-card>
+        </v-col>
 
-      <v-col cols="12" md="6">
-        <v-card class="mb-4 rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.08)]">
-          <v-card-item>
-            <div class="flex items-center">
+        <v-col cols="12" md="6">
+          <v-card class="mb-4 rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.08)]">
+            <v-card-item>
               <span class="font-medium">年度累積損益</span>
-              <v-tooltip origin="start center" transition="scale-transition">
-                <template v-slot:activator="{ props }">
-                  <v-icon v-bind="props" size="small" class="ml-1" color="neutral-400">
-                    mdi-help-circle-outline
-                  </v-icon>
-                </template>
-                <span class="text-sm">從第一年到該年的累積損益金額</span>
-              </v-tooltip>
-            </div>
-          </v-card-item>
-          <v-card-text>
-            <div class="h-65">
-              <Line
-                v-if="annual_performance.length > 0"
-                :data="cumulative_chart_data"
-                :options="cumulative_chart_options"
-              />
-              <div v-else class="flex items-center justify-center h-full text-neutral-400">
-                尚無資料
+            </v-card-item>
+            <v-card-text>
+              <div class="h-65">
+                <Line
+                  v-if="annual_performance[market.value].length > 0"
+                  :data="getCumulativeChartData(market.value)"
+                  :options="getCumulativeChartOptions()"
+                />
+                <div v-else class="flex items-center justify-center h-full text-neutral-400">
+                  尚無資料
+                </div>
               </div>
-            </div>
-          </v-card-text>
-        </v-card>
-      </v-col>
-    </v-row>
+            </v-card-text>
+          </v-card>
+        </v-col>
+      </v-row>
+    </div>
   </div>
 </template>

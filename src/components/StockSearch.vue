@@ -2,15 +2,18 @@
 import { ref, watch, onMounted, nextTick } from 'vue';
 
 import { useStockList } from '../composables/useStockList';
+import { DEFAULT_MARKET, type Market } from '../utils/market';
 
 interface Stock {
   ticker: string;
   name: string;
+  market: Market;
 }
 
 const props = defineProps<{
   ticker?: string;
   name?: string;
+  market?: Market;
   placeholder?: string;
 }>();
 
@@ -20,7 +23,7 @@ const emit = defineEmits<{
   select: [stock: Stock];
 }>();
 
-const { loadStockList, addStock, searchStocks, is_loading } = useStockList();
+const { loadStockList, addStock, searchStocksWithFallback, loading_states } = useStockList();
 
 const search_query = ref('');
 const display_value = ref('');
@@ -31,14 +34,25 @@ const results = ref<Stock[]>([]);
 const highlighted_index = ref(-1);
 const list_ref = ref<HTMLElement | null>(null);
 
-function performSearch() {
+let search_request_id = 0;
+
+async function performSearch() {
   const query = search_query.value;
   if (!query || query.length < 1) {
     results.value = [];
     highlighted_index.value = -1;
     return;
   }
-  results.value = searchStocks(query);
+
+  const request_id = ++search_request_id;
+  const market = props.market || DEFAULT_MARKET;
+  const next_results = await searchStocksWithFallback(query, market);
+
+  if (request_id !== search_request_id) {
+    return;
+  }
+
+  results.value = next_results;
   highlighted_index.value = results.value.length > 0 ? 0 : -1;
 }
 
@@ -52,6 +66,13 @@ function selectStock(stock: Stock) {
   search_query.value = '';
   is_menu_open.value = false;
   addStock(stock);
+}
+
+function handleInput(value: string) {
+  display_value.value = '';
+  search_query.value = value;
+  is_menu_open.value = true;
+  void performSearch();
 }
 
 function handleKeydown(e: KeyboardEvent) {
@@ -110,8 +131,21 @@ watch(
   },
 );
 
+watch(
+  () => props.market,
+  () => {
+    results.value = [];
+    highlighted_index.value = -1;
+    search_query.value = '';
+    display_value.value = '';
+    selected_ticker.value = '';
+    selected_name.value = '';
+    loadStockList(props.market || DEFAULT_MARKET);
+  },
+);
+
 onMounted(async () => {
-  await loadStockList();
+  await loadStockList(props.market || DEFAULT_MARKET);
 
   if (props.ticker) {
     search_query.value = props.ticker;
@@ -128,17 +162,14 @@ onMounted(async () => {
       <v-text-field
         :model-value="display_value || search_query"
         v-bind="activator_props"
-        :placeholder="is_loading ? '載入股票清單中...' : placeholder"
+        :placeholder="
+          loading_states[props.market || DEFAULT_MARKET] ? '載入股票清單中...' : placeholder
+        "
+        @focus="is_menu_open = true"
         variant="outlined"
         density="compact"
         hide-details
-        @update:model-value="
-          (val: string) => {
-            display_value = '';
-            search_query = val;
-            performSearch();
-          }
-        "
+        @update:model-value="handleInput"
         @keydown="handleKeydown"
       >
         <template v-if="selected_ticker" #append-inner>
@@ -164,7 +195,12 @@ onMounted(async () => {
       </v-list>
     </v-card>
 
-    <v-card v-else-if="search_query && search_query.length >= 1 && !is_loading" min-width="300">
+    <v-card
+      v-else-if="
+        search_query && search_query.length >= 1 && !loading_states[props.market || DEFAULT_MARKET]
+      "
+      min-width="300"
+    >
       <v-list-item class="text-neutral-400"> 找不到 "{{ search_query }}" </v-list-item>
     </v-card>
   </v-menu>

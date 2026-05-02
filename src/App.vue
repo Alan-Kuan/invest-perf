@@ -111,9 +111,17 @@ async function handleClearCache() {
     return;
   }
   localStorage.removeItem('annual_performance_cache');
+  localStorage.removeItem('annual_performance_cache_tw');
+  localStorage.removeItem('annual_performance_cache_us');
   localStorage.removeItem('curr_prices_cache');
+  localStorage.removeItem('curr_prices_cache_tw');
+  localStorage.removeItem('curr_prices_cache_us');
   localStorage.removeItem('price_last_update');
+  localStorage.removeItem('price_last_update_tw');
+  localStorage.removeItem('price_last_update_us');
   localStorage.removeItem('stock_list_cache');
+  localStorage.removeItem('stock_list_cache_tw');
+  localStorage.removeItem('stock_list_cache_us');
   localStorage.removeItem('rise_fall_color_scheme');
   showSnackbar('快取已清除');
 }

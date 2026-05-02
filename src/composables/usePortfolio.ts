@@ -1,5 +1,6 @@
 import { ref } from 'vue';
 
+import { DEFAULT_MARKET, getMarketStorageKey, normalizeMarket, type Market } from '../utils/market';
 import { useDatabase } from './useDatabase';
 
 export interface Holding {
@@ -7,6 +8,7 @@ export interface Holding {
   name: string;
   shares: number;
   total_cost: number;
+  market: Market;
   curr_price?: number;
   total_value?: number;
   unrealized_gain?: number;
@@ -18,6 +20,7 @@ interface PriceData {
 }
 
 export interface PortfolioSummary {
+  market: Market;
   holdings: Holding[];
   total_cost: number;
   total_value: number;
@@ -28,29 +31,58 @@ export interface PortfolioSummary {
 export function usePortfolio() {
   const { query } = useDatabase();
   const holdings = ref<Holding[]>([]);
-  const prices = ref<PriceData>({});
-  const realized_gain_cache = ref<number>(0);
+  const prices = ref<Record<Market, PriceData>>({
+    tw: {},
+    us: {},
+  });
 
-  const loadCurrPrices = (): PriceData => {
-    const stored = localStorage.getItem('curr_prices_cache');
+  const loadCurrPrices = (market: Market): PriceData => {
+    const normalized_market = normalizeMarket(market);
+    const market_key = getMarketStorageKey('curr_prices_cache', normalized_market);
+    const legacy_key = normalized_market === 'tw' ? 'curr_prices_cache' : '';
+    const stored =
+      localStorage.getItem(market_key) || (legacy_key ? localStorage.getItem(legacy_key) : null);
+
     if (stored) {
       try {
-        prices.value = JSON.parse(stored);
+        prices.value[normalized_market] = JSON.parse(stored) as PriceData;
       } catch {
-        prices.value = {};
+        prices.value[normalized_market] = {};
       }
+    } else {
+      prices.value[normalized_market] = {};
     }
-    return prices.value;
+
+    return prices.value[normalized_market];
   };
 
-  const updateCurrPricesCache = (new_prices: PriceData): void => {
-    prices.value = { ...prices.value, ...new_prices };
-    localStorage.setItem('curr_prices_cache', JSON.stringify(prices.value));
+  const updateCurrPricesCache = (market: Market, new_prices: PriceData): void => {
+    const normalized_market = normalizeMarket(market);
+    prices.value[normalized_market] = {
+      ...prices.value[normalized_market],
+      ...new_prices,
+    };
+
+    const market_key = getMarketStorageKey('curr_prices_cache', normalized_market);
+    localStorage.setItem(market_key, JSON.stringify(prices.value[normalized_market]));
+
+    if (normalized_market === 'tw') {
+      localStorage.setItem('curr_prices_cache', JSON.stringify(prices.value[normalized_market]));
+    }
   };
 
-  const loadHoldings = () => {
-    const sql = `SELECT * FROM transactions ORDER BY date, id`;
-    const txs = query(sql) as any[];
+  const getSaleCostRate = (market: Market, ticker: string): number => {
+    const fee_rate = 0.001425;
+    const tax_rate = market === 'tw' ? (ticker.startsWith('00') ? 0.001 : 0.003) : 0;
+    return 1 - fee_rate - tax_rate;
+  };
+
+  const loadHoldings = (market: Market) => {
+    const normalized_market = normalizeMarket(market);
+    const txs = query(
+      `SELECT * FROM transactions WHERE market = ? ORDER BY date ASC, created_at ASC, id ASC`,
+      [normalized_market],
+    ) as any[];
 
     const state: Record<string, { shares: number; cost: number; name: string }> = {};
     let total_realized = 0;
@@ -59,55 +91,66 @@ export function usePortfolio() {
       if (!state[tx.ticker]) {
         state[tx.ticker] = { shares: 0, cost: 0, name: tx.name };
       }
-      const h = state[tx.ticker];
+      const holding = state[tx.ticker];
 
       if (tx.type === 'buy') {
-        h.shares += tx.shares;
-        h.cost += tx.net_amount;
+        holding.shares += tx.shares;
+        holding.cost += tx.net_amount;
       } else if (tx.type === 'sell') {
-        const avg_cost = h.shares > 0 ? h.cost / h.shares : 0;
+        const avg_cost = holding.shares > 0 ? holding.cost / holding.shares : 0;
         const cost_basis = tx.shares * avg_cost;
         total_realized += tx.net_amount - cost_basis;
-        h.shares -= tx.shares;
-        h.cost -= cost_basis;
+        holding.shares -= tx.shares;
+        holding.cost -= cost_basis;
       }
     }
 
-    realized_gain_cache.value = total_realized;
-
-    holdings.value = Object.entries(state)
-      .filter(([_, h]) => h.shares > 0)
-      .map(([ticker, h]) => ({
+    const holdings: Holding[] = Object.entries(state)
+      .filter(([, holding]) => holding.shares > 0)
+      .map(([ticker, holding]) => ({
         ticker,
-        name: h.name,
-        shares: h.shares,
-        total_cost: h.cost,
+        name: holding.name,
+        shares: holding.shares,
+        total_cost: holding.cost,
+        market: normalized_market,
       }));
 
-    for (const h of holdings.value) {
-      if (!prices.value[h.ticker]) continue;
+    for (const holding of holdings) {
+      const current_price = prices.value[normalized_market][holding.ticker];
+      if (!current_price) continue;
 
-      const is_etf = h.ticker.startsWith('00');
-      const fee_rate = 0.001425;
-      const tax_rate = is_etf ? 0.001 : 0.003;
-
-      h.curr_price = prices.value[h.ticker];
-      h.total_value = h.curr_price * h.shares;
-      h.unrealized_gain = Math.round(h.total_value * (1 - fee_rate - tax_rate) - h.total_cost);
-      h.unrealized_roi = (h.unrealized_gain / h.total_cost) * 100;
+      const sale_cost_rate = getSaleCostRate(normalized_market, holding.ticker);
+      holding.curr_price = current_price;
+      holding.total_value = current_price * holding.shares;
+      holding.unrealized_gain = Math.round(
+        holding.total_value * sale_cost_rate - holding.total_cost,
+      );
+      holding.unrealized_roi =
+        holding.total_cost > 0 ? (holding.unrealized_gain / holding.total_cost) * 100 : 0;
     }
-  };
-
-  const getPortfolioSummary = (): PortfolioSummary => {
-    loadCurrPrices();
-    loadHoldings();
 
     return {
-      holdings: holdings.value,
-      total_cost: holdings.value.reduce((sum, h) => sum + h.total_cost, 0),
-      total_value: holdings.value.reduce((sum, h) => sum + (h.total_value ?? 0), 0),
-      realized_gain: realized_gain_cache.value,
-      unrealized_gain: holdings.value.reduce((sum, h) => sum + (h.unrealized_gain ?? 0), 0),
+      holdings,
+      total_realized,
+    };
+  };
+
+  const getPortfolioSummary = (market: Market = DEFAULT_MARKET): PortfolioSummary => {
+    const normalized_market = normalizeMarket(market);
+    loadCurrPrices(normalized_market);
+    const { holdings: market_holdings, total_realized } = loadHoldings(normalized_market);
+    holdings.value = market_holdings;
+
+    return {
+      market: normalized_market,
+      holdings: market_holdings,
+      total_cost: market_holdings.reduce((sum, holding) => sum + holding.total_cost, 0),
+      total_value: market_holdings.reduce((sum, holding) => sum + (holding.total_value ?? 0), 0),
+      realized_gain: total_realized,
+      unrealized_gain: market_holdings.reduce(
+        (sum, holding) => sum + (holding.unrealized_gain ?? 0),
+        0,
+      ),
     };
   };
 

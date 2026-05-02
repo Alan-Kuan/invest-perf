@@ -1,6 +1,7 @@
 import { ref } from 'vue';
 
 import { generateId } from '../db';
+import { DEFAULT_MARKET, type Market } from '../utils/market';
 import { useDatabase } from './useDatabase';
 
 export interface Dividend {
@@ -8,6 +9,7 @@ export interface Dividend {
   pay_date: string;
   ticker: string;
   name: string;
+  market: Market;
   category: 'cash' | 'stock';
   shares: number;
   per_share: number;
@@ -22,6 +24,7 @@ interface DividendFilters {
   year?: string | null;
   start_date?: string;
   end_date?: string;
+  market?: Market | '';
   sort_order?: 'ASC' | 'DESC';
 }
 
@@ -29,6 +32,7 @@ export interface DividendInput {
   pay_date: string;
   ticker: string;
   name: string;
+  market: Market;
   category: 'cash' | 'stock';
   shares: number;
   per_share: number;
@@ -53,6 +57,11 @@ export function useDividends() {
     if (filters.category) {
       sql += ' AND category = ?';
       params.push(filters.category);
+    }
+
+    if (filters.market) {
+      sql += ' AND market = ?';
+      params.push(filters.market);
     }
 
     if (filters.year) {
@@ -82,13 +91,14 @@ export function useDividends() {
     const amount = data.shares * data.per_share - (data.fee || 0);
 
     execute(
-      `INSERT INTO dividends (id, pay_date, ticker, name, category, shares, per_share, fee, amount)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO dividends (id, pay_date, ticker, name, market, category, shares, per_share, fee, amount)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
         data.pay_date,
         data.ticker,
         data.name || '',
+        data.market || DEFAULT_MARKET,
         data.category,
         data.shares,
         data.per_share,
@@ -105,11 +115,12 @@ export function useDividends() {
     const amount = data.shares * data.per_share - (data.fee || 0);
 
     execute(
-      `UPDATE dividends SET pay_date=?, ticker=?, name=?, category=?, shares=?, per_share=?, fee=?, amount=? WHERE id=?`,
+      `UPDATE dividends SET pay_date=?, ticker=?, name=?, market=?, category=?, shares=?, per_share=?, fee=?, amount=? WHERE id=?`,
       [
         data.pay_date,
         data.ticker,
         data.name || '',
+        data.market || DEFAULT_MARKET,
         data.category,
         data.shares,
         data.per_share,
@@ -127,22 +138,40 @@ export function useDividends() {
     loadDividends(current_filters.value);
   };
 
-  const getAvailableYears = (): string[] => {
-    const sql = `SELECT DISTINCT strftime('%Y', pay_date) as year FROM dividends ORDER BY year DESC`;
-    const result = query(sql) as { year: string }[];
+  const getAvailableYears = (market?: Market | ''): string[] => {
+    let sql = `SELECT DISTINCT strftime('%Y', pay_date) as year FROM dividends WHERE 1=1`;
+    const params: string[] = [];
+
+    if (market) {
+      sql += ' AND market = ?';
+      params.push(market);
+    }
+
+    sql += ' ORDER BY year DESC';
+
+    const result = query(sql, params) as { year: string }[];
     return result.map(r => r.year);
   };
 
-  const getDividendsByTicker = (ticker: string, year: number): number => {
+  const getDividendsByTicker = (ticker: string, year: number, market?: Market): number => {
     const start_date = `${year}-01-01`;
     const end_date = `${year}-12-31`;
-    const sql = `
+    let sql = `
       SELECT COALESCE(SUM(CASE WHEN category = 'cash' THEN amount ELSE 0 END), 0) +
              COALESCE(SUM(CASE WHEN category = 'stock' THEN shares * per_share ELSE 0 END), 0) as total
       FROM dividends
       WHERE ticker = ? AND pay_date >= ? AND pay_date <= ?
     `;
-    const result = query(sql, [ticker, start_date, end_date]) as { total: number }[];
+    const params: string[] = [ticker, start_date, end_date];
+    if (market) {
+      sql = sql.replace(
+        'WHERE ticker = ? AND pay_date >= ? AND pay_date <= ?',
+        'WHERE ticker = ? AND pay_date >= ? AND pay_date <= ? AND market = ?',
+      );
+      params.push(market);
+    }
+
+    const result = query(sql, params) as { total: number }[];
     return result[0]?.total || 0;
   };
 
