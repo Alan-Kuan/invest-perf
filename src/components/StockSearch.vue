@@ -13,7 +13,7 @@ interface Stock {
 const props = defineProps<{
   ticker?: string;
   name?: string;
-  market?: Market;
+  market?: Market | '';
   placeholder?: string;
 }>();
 
@@ -45,7 +45,7 @@ async function performSearch() {
   }
 
   const request_id = ++search_request_id;
-  const market = props.market || DEFAULT_MARKET;
+  const market = props.market ?? DEFAULT_MARKET;
   const next_results = await searchStocksWithFallback(query, market);
 
   if (request_id !== search_request_id) {
@@ -133,19 +133,28 @@ watch(
 
 watch(
   () => props.market,
-  () => {
+  async () => {
     results.value = [];
     highlighted_index.value = -1;
     search_query.value = '';
     display_value.value = '';
     selected_ticker.value = '';
     selected_name.value = '';
-    loadStockList(props.market || DEFAULT_MARKET);
+    if (props.market === '' || props.market === undefined) {
+      await Promise.all([loadStockList('tw'), loadStockList('us')]);
+      return;
+    }
+
+    await loadStockList(props.market || DEFAULT_MARKET);
   },
 );
 
 onMounted(async () => {
-  await loadStockList(props.market || DEFAULT_MARKET);
+  if (props.market === '' || props.market === undefined) {
+    await Promise.all([loadStockList('tw'), loadStockList('us')]);
+  } else {
+    await loadStockList(props.market || DEFAULT_MARKET);
+  }
 
   if (props.ticker) {
     search_query.value = props.ticker;
@@ -163,7 +172,13 @@ onMounted(async () => {
         :model-value="display_value || search_query"
         v-bind="activator_props"
         :placeholder="
-          loading_states[props.market || DEFAULT_MARKET] ? '載入股票清單中...' : placeholder
+          props.market === ''
+            ? loading_states.tw || loading_states.us
+              ? '載入股票清單中...'
+              : placeholder
+            : loading_states[props.market || DEFAULT_MARKET]
+              ? '載入股票清單中...'
+              : placeholder
         "
         @focus="is_menu_open = true"
         variant="outlined"

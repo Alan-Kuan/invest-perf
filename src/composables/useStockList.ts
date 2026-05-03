@@ -15,6 +15,8 @@ interface Stock {
   market: Market;
 }
 
+type SearchMarket = Market | '';
+
 function collectStockEntries(raw_data: unknown): Array<{ ticker: string; name: string }> {
   const entries: Array<{ ticker: string; name: string }> = [];
 
@@ -281,11 +283,11 @@ export function useStockList() {
 
   const searchStocksWithFallback = async (
     query: string,
-    market: Market = DEFAULT_MARKET,
+    market: SearchMarket = DEFAULT_MARKET,
   ): Promise<Stock[]> => {
-    const normalized_market = normalizeMarket(market);
+    const normalized_market = market === '' ? '' : normalizeMarket(market);
     const local_results = searchStocks(query, normalized_market);
-    if (local_results.length > 0 || normalized_market !== 'us') {
+    if (local_results.length > 0 || (normalized_market !== '' && normalized_market !== 'us')) {
       return local_results;
     }
 
@@ -302,11 +304,14 @@ export function useStockList() {
     return remote_results;
   };
 
-  const searchStocks = (query: string, market: Market = DEFAULT_MARKET): Stock[] => {
+  const searchStocks = (query: string, market: SearchMarket = DEFAULT_MARKET): Stock[] => {
     if (!query || query.length < 1) return [];
 
     const q = query.toUpperCase();
-    const list = stock_lists.value[normalizeMarket(market)] ?? [];
+    const list =
+      market === ''
+        ? [...stock_lists.value.tw, ...stock_lists.value.us]
+        : (stock_lists.value[normalizeMarket(market)] ?? []);
 
     const results = list.filter(s => {
       const ticker_match = s.ticker.toUpperCase().includes(q);

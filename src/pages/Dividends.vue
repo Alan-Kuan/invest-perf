@@ -176,6 +176,22 @@ const computed_amount = computed(() => {
   return shares * per_share - fee;
 });
 
+function formatCurrency(value: number, market: Market): string {
+  const currency_code = market === 'us' ? 'USD' : 'TWD';
+  if (market === 'us') {
+    return `${currency_code} ${value.toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
+  }
+
+  return `${currency_code} ${value.toLocaleString()}`;
+}
+
+function getCurrencyCode(market: Market): string {
+  return market === 'us' ? 'USD' : 'TWD';
+}
+
 function submitForm() {
   if (!form.value.pay_date || !form.value.ticker || !form.value.shares || !form.value.per_share) {
     showSnackbar?.('請填寫必填欄位', 'warning');
@@ -225,18 +241,33 @@ async function handleDelete(id: string) {
   }
 }
 
-const total_dividend = computed(() => {
-  return dividends.value.reduce((sum, d) => sum + d.amount, 0);
+const total_dividend_by_market = computed<Record<Market, number>>(() => {
+  return {
+    tw: dividends.value.filter(d => d.market === 'tw').reduce((sum, d) => sum + d.amount, 0),
+    us: dividends.value.filter(d => d.market === 'us').reduce((sum, d) => sum + d.amount, 0),
+  };
 });
 
-const total_cash = computed(() => {
-  return dividends.value.filter(d => d.category === 'cash').reduce((sum, d) => sum + d.amount, 0);
+const total_cash_by_market = computed<Record<Market, number>>(() => {
+  return {
+    tw: dividends.value
+      .filter(d => d.market === 'tw' && d.category === 'cash')
+      .reduce((sum, d) => sum + d.amount, 0),
+    us: dividends.value
+      .filter(d => d.market === 'us' && d.category === 'cash')
+      .reduce((sum, d) => sum + d.amount, 0),
+  };
 });
 
-const total_stock = computed(() => {
-  return dividends.value
-    .filter(d => d.category === 'stock')
-    .reduce((sum, d) => sum + d.shares * d.per_share, 0);
+const total_stock_by_market = computed<Record<Market, number>>(() => {
+  return {
+    tw: dividends.value
+      .filter(d => d.market === 'tw' && d.category === 'stock')
+      .reduce((sum, d) => sum + d.shares * d.per_share, 0),
+    us: dividends.value
+      .filter(d => d.market === 'us' && d.category === 'stock')
+      .reduce((sum, d) => sum + d.shares * d.per_share, 0),
+  };
 });
 
 const available_years = ref<string[]>([]);
@@ -363,7 +394,11 @@ onMounted(() => {
                   :class="computed_amount === 0 ? 'text-neutral-400' : 'text-rise'"
                   class="text-xl font-bold"
                 >
-                  {{ computed_amount === 0 ? '$' : '+$' }}{{ computed_amount.toLocaleString() }}
+                  {{
+                    computed_amount === 0
+                      ? formatCurrency(0, form.market)
+                      : `+${formatCurrency(computed_amount, form.market)}`
+                  }}
                 </div>
               </div>
 
@@ -378,32 +413,40 @@ onMounted(() => {
       <v-card-item class="font-medium pb-2">股利歷史</v-card-item>
       <v-card-text>
         <v-row class="mb-4" align="stretch">
-          <v-col sm="4">
+          <v-col sm="6">
             <v-card class="rounded-lg h-full" variant="tonal">
               <v-card-text class="text-sm">
-                <div>實發股利總計</div>
+                <div class="flex items-center gap-2 mb-1">
+                  <span>台股部位加總</span>
+                  <v-chip size="x-small" variant="tonal" color="primary" class="text-[11px]">
+                    TWD
+                  </v-chip>
+                </div>
                 <div class="font-bold text-rise">
-                  {{ total_dividend.toLocaleString() }}
+                  {{ total_dividend_by_market.tw.toLocaleString() }}
+                </div>
+                <div class="text-neutral-400 text-xs mt-1">
+                  現金 {{ total_cash_by_market.tw.toLocaleString() }}、股票
+                  {{ total_stock_by_market.tw.toLocaleString() }}
                 </div>
               </v-card-text>
             </v-card>
           </v-col>
-          <v-col sm="4">
+          <v-col sm="6">
             <v-card class="rounded-lg h-full" variant="tonal">
               <v-card-text class="text-sm">
-                <div>現金股利</div>
-                <div class="font-bold">
-                  {{ total_cash.toLocaleString() }}
+                <div class="flex items-center gap-2 mb-1">
+                  <span>美股部位加總</span>
+                  <v-chip size="x-small" variant="tonal" color="primary" class="text-[11px]">
+                    USD
+                  </v-chip>
                 </div>
-              </v-card-text>
-            </v-card>
-          </v-col>
-          <v-col sm="4">
-            <v-card class="rounded-lg h-full" variant="tonal">
-              <v-card-text class="text-sm">
-                <div>股票股利</div>
-                <div class="font-bold">
-                  {{ total_stock.toLocaleString() }}
+                <div class="font-bold text-rise">
+                  {{ total_dividend_by_market.us.toLocaleString() }}
+                </div>
+                <div class="text-neutral-400 text-xs mt-1">
+                  現金 {{ total_cash_by_market.us.toLocaleString() }}、股票
+                  {{ total_stock_by_market.us.toLocaleString() }}
                 </div>
               </v-card-text>
             </v-card>
@@ -430,7 +473,7 @@ onMounted(() => {
             <StockSearch
               :ticker="filters.ticker"
               :name="filters.name"
-              :market="filters.market || DEFAULT_MARKET"
+              :market="filters.market"
               placeholder="輸入代號或名稱搜尋"
               @update:ticker="
                 filters.ticker = $event;
@@ -496,6 +539,7 @@ onMounted(() => {
               <th class="text-right font-medium text-neutral-500">基準日持有股數</th>
               <th class="text-right font-medium text-neutral-500">每股股利</th>
               <th class="text-right font-medium text-neutral-500">匯費</th>
+              <th class="text-center font-medium text-neutral-500">幣別</th>
               <th class="text-right font-medium text-neutral-500">實發股利</th>
               <th class="text-center font-medium text-neutral-500">操作</th>
             </tr>
@@ -524,6 +568,11 @@ onMounted(() => {
               <td class="text-right">{{ d.shares.toLocaleString() }}</td>
               <td class="text-right">{{ d.per_share.toLocaleString() }}</td>
               <td class="text-right">{{ d.fee.toLocaleString() }}</td>
+              <td class="text-center">
+                <v-chip size="small" variant="tonal" color="primary">
+                  {{ getCurrencyCode(d.market) }}
+                </v-chip>
+              </td>
               <td class="text-right text-rise">{{ d.amount.toLocaleString() }}</td>
               <td class="text-center">
                 <v-btn color="error" size="small" variant="text" @click="handleDelete(d.id)">
@@ -532,7 +581,7 @@ onMounted(() => {
               </td>
             </tr>
             <tr v-if="dividends.length === 0">
-              <td colspan="9" class="text-center text-neutral-400 pa-4">尚無股利紀錄</td>
+              <td colspan="10" class="text-center text-neutral-400 pa-4">尚無股利紀錄</td>
             </tr>
           </tbody>
         </v-table>

@@ -6,7 +6,7 @@ import { Doughnut } from 'vue-chartjs';
 import { useDatabase } from '../composables/useDatabase';
 import { usePortfolio, type PortfolioSummary } from '../composables/usePortfolio';
 import { useStockPrice } from '../composables/useStockPrice';
-import { getMarketLabel, MARKET_OPTIONS, type Market } from '../utils/market';
+import { MARKET_OPTIONS, type Market } from '../utils/market';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
@@ -124,7 +124,6 @@ function formatAmount(value: number, market: Market): string {
       maximumFractionDigits: 2,
     });
   }
-
   return value.toLocaleString();
 }
 
@@ -219,7 +218,12 @@ onUnmounted(() => {
 
     <div v-for="market in MARKET_OPTIONS" :key="market.value" class="mb-8">
       <div class="flex justify-between items-center mb-4">
-        <h3 class="text-xl font-medium">{{ market.title }}</h3>
+        <div class="flex items-center gap-2">
+          <h3 class="text-xl font-medium">{{ market.title }}</h3>
+          <v-chip size="x-small" variant="tonal" color="primary" class="text-[11px]">
+            {{ market.value === 'us' ? 'USD' : 'TWD' }}
+          </v-chip>
+        </div>
         <div class="flex items-center gap-3">
           <span v-if="getLastUpdateDisplay(market.value)" class="text-neutral-400 text-sm">
             更新時間: {{ getLastUpdateDisplay(market.value) }}
@@ -241,7 +245,7 @@ onUnmounted(() => {
             <v-card-text>
               <div class="text-neutral-400">總成本</div>
               <div class="font-bold text-base">
-                {{ summaries[market.value].total_cost.toLocaleString() }}
+                {{ formatAmount(summaries[market.value].total_cost, market.value) }}
               </div>
             </v-card-text>
           </v-card>
@@ -251,7 +255,7 @@ onUnmounted(() => {
             <v-card-text>
               <div class="text-neutral-400">總現值</div>
               <div class="font-bold text-base">
-                {{ summaries[market.value].total_value.toLocaleString() }}
+                {{ formatAmount(summaries[market.value].total_value, market.value) }}
               </div>
             </v-card-text>
           </v-card>
@@ -358,26 +362,38 @@ onUnmounted(() => {
                 <td>{{ holding.name || '-' }}</td>
                 <td class="text-right">{{ holding.shares.toLocaleString() }}</td>
                 <td class="text-right">
-                  {{ (holding.total_cost / holding.shares).toLocaleString() }}
+                  {{ formatAmount(holding.total_cost / holding.shares, market.value) }}
                 </td>
-                <td class="text-right">{{ holding.total_cost.toLocaleString() }}</td>
-                <td class="text-right">{{ holding.curr_price?.toLocaleString() || '-' }}</td>
                 <td class="text-right">
-                  {{ holding.total_value?.toLocaleString() || '-' }}
+                  {{ formatAmount(holding.total_cost, market.value) }}
+                </td>
+                <td class="text-right">
+                  {{
+                    holding.curr_price !== undefined
+                      ? formatAmount(holding.curr_price, market.value)
+                      : '-'
+                  }}
+                </td>
+                <td class="text-right">
+                  {{
+                    holding.total_value !== undefined
+                      ? formatAmount(holding.total_value, market.value)
+                      : '-'
+                  }}
                 </td>
                 <td
                   class="text-right"
-                  :class="(holding.unrealized_gain || 0) >= 0 ? 'text-rise' : 'text-fall'"
+                  :class="(holding.unrealized_gain ?? 0) >= 0 ? 'text-rise' : 'text-fall'"
                 >
-                  {{ (holding.unrealized_gain || 0) >= 0 ? '+' : ''
-                  }}{{ formatAmount(holding.unrealized_gain || 0, market.value) }}
+                  {{ (holding.unrealized_gain ?? 0) > 0 ? '+' : ''
+                  }}{{ formatAmount(holding.unrealized_gain ?? 0, market.value) }}
                 </td>
                 <td
                   class="text-right"
-                  :class="(holding.unrealized_roi || 0) >= 0 ? 'text-rise' : 'text-fall'"
+                  :class="(holding.unrealized_roi ?? 0) >= 0 ? 'text-rise' : 'text-fall'"
                 >
-                  {{ (holding.unrealized_roi || 0) >= 0 ? '+' : ''
-                  }}{{ (holding.unrealized_roi || 0).toFixed(2) }}%
+                  {{ (holding.unrealized_roi ?? 0) > 0 ? '+' : ''
+                  }}{{ (holding.unrealized_roi ?? 0).toFixed(2) }}%
                 </td>
               </tr>
               <tr v-if="summaries[market.value].holdings.length === 0">

@@ -148,6 +148,22 @@ const fee_manually_edited = ref(false);
 
 const DEFAULT_TW_FEE_RATE = 0.001425;
 
+function formatCurrency(value: number, market: Market): string {
+  const currency_code = market === 'us' ? 'USD' : 'TWD';
+  if (market === 'us') {
+    return `${currency_code} ${value.toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
+  }
+
+  return `${currency_code} ${value.toLocaleString()}`;
+}
+
+function getCurrencyCode(market: Market): string {
+  return market === 'us' ? 'USD' : 'TWD';
+}
+
 function updateFormDate(val: Date | string) {
   if (!val) return;
   const date_str = formatDateToString(val);
@@ -560,8 +576,13 @@ onMounted(async () => {
                   "
                   class="text-xl font-bold"
                 >
-                  {{ computed_net_amount === 0 ? '$' : form.type === 'buy' ? '-$' : '+$'
-                  }}{{ computed_net_amount.toLocaleString() }}
+                  {{
+                    computed_net_amount === 0
+                      ? formatCurrency(0, form.market)
+                      : form.type === 'buy'
+                        ? `-${formatCurrency(computed_net_amount, form.market)}`
+                        : `+${formatCurrency(computed_net_amount, form.market)}`
+                  }}
                 </div>
               </div>
 
@@ -592,7 +613,7 @@ onMounted(async () => {
             <StockSearch
               :ticker="filters.ticker"
               :name="filters.name"
-              :market="filters.market || DEFAULT_MARKET"
+              :market="filters.market"
               placeholder="輸入代號或名稱搜尋"
               @update:ticker="
                 filters.ticker = $event;
@@ -689,6 +710,7 @@ onMounted(async () => {
               <th class="text-right font-medium text-neutral-500">價金</th>
               <th class="text-right font-medium text-neutral-500">手續費</th>
               <th class="text-right font-medium text-neutral-500">交易稅</th>
+              <th class="text-center font-medium text-neutral-500">幣別</th>
               <th class="text-right font-medium text-neutral-500">淨收付</th>
               <th class="text-center font-medium text-neutral-500">操作</th>
             </tr>
@@ -715,6 +737,11 @@ onMounted(async () => {
               <td class="text-right">{{ t.total.toLocaleString() }}</td>
               <td class="text-right">{{ t.fee.toLocaleString() }}</td>
               <td class="text-right">{{ t.tax.toLocaleString() }}</td>
+              <td class="text-center">
+                <v-chip size="small" variant="tonal" color="primary">
+                  {{ getCurrencyCode(t.market) }}
+                </v-chip>
+              </td>
               <td
                 class="text-right"
                 :class="
@@ -735,7 +762,7 @@ onMounted(async () => {
               </td>
             </tr>
             <tr v-if="transactions.length === 0">
-              <td colspan="11" class="text-center text-neutral-400 pa-4">尚無交易紀錄</td>
+              <td colspan="12" class="text-center text-neutral-400 pa-4">尚無交易紀錄</td>
             </tr>
           </tbody>
         </v-table>

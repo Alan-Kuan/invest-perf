@@ -564,7 +564,12 @@ watch(
 
     <div v-for="market in MARKET_OPTIONS" :key="market.value" class="mb-10">
       <div class="flex items-center justify-between mb-4">
-        <h3 class="text-xl font-medium">{{ market.title }}</h3>
+        <div class="flex items-center gap-2">
+          <h3 class="text-xl font-medium">{{ market.title }}</h3>
+          <v-chip size="x-small" variant="tonal" color="primary" class="text-[11px]">
+            {{ market.value === 'us' ? 'USD' : 'TWD' }}
+          </v-chip>
+        </div>
         <v-btn
           variant="tonal"
           size="small"
