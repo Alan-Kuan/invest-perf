@@ -171,23 +171,6 @@ export function useStockList() {
           }
         }
 
-        if (Object.keys(stock_map).length === 0) {
-          const response = await fetch(
-            buildCorsProxyUrl('https://www.sec.gov/files/company_tickers_exchange.json'),
-          );
-
-          if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-          }
-
-          const data = await response.json();
-          const entries = collectStockEntries(data);
-
-          for (const entry of entries) {
-            stock_map[entry.ticker] = entry.name;
-          }
-        }
-
         localStorage.setItem(cache_key, JSON.stringify(stock_map));
         stock_lists.value[normalized_market] = Object.entries(stock_map)
           .map(([ticker, name]) => ({
