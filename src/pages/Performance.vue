@@ -420,19 +420,23 @@ function saveAnnualPerformanceCache(market: Market, data: AnnualData[]): void {
     calculated_at: new Date().toISOString().split('T')[0],
   };
   localStorage.setItem(getAnnualPerformanceCacheKey(market), JSON.stringify(cache));
-  if (market === 'tw') {
-    localStorage.setItem('annual_performance_cache', JSON.stringify(cache));
-  }
 }
 
 async function checkAndRecalculate(market: Market): Promise<void> {
-  const stored = localStorage.getItem(getAnnualPerformanceCacheKey(market));
-  const legacy_stored = market === 'tw' ? localStorage.getItem('annual_performance_cache') : null;
-  const cached = stored
-    ? (JSON.parse(stored) as AnnualDataCache)
-    : legacy_stored
-      ? (JSON.parse(legacy_stored) as AnnualDataCache)
-      : null;
+  const cache_key = getAnnualPerformanceCacheKey(market);
+  const stored = localStorage.getItem(cache_key);
+  const legacy_key = 'annual_performance_cache';
+  const legacy_stored = market === 'tw' ? localStorage.getItem(legacy_key) : null;
+
+  if (legacy_stored) {
+    if (!stored) {
+      localStorage.setItem(cache_key, legacy_stored);
+    }
+    localStorage.removeItem(legacy_key);
+  }
+
+  const cached =
+    stored || legacy_stored ? (JSON.parse(stored || legacy_stored!) as AnnualDataCache) : null;
 
   const latest_transaction = query(
     'SELECT MAX(date) as max_date FROM transactions WHERE market = ?',

@@ -40,8 +40,14 @@ export function usePortfolio() {
     const normalized_market = normalizeMarket(market);
     const market_key = getMarketStorageKey('curr_prices_cache', normalized_market);
     const legacy_key = normalized_market === 'tw' ? 'curr_prices_cache' : '';
-    const stored =
-      localStorage.getItem(market_key) || (legacy_key ? localStorage.getItem(legacy_key) : null);
+    const legacy_stored = legacy_key ? localStorage.getItem(legacy_key) : null;
+    let stored = localStorage.getItem(market_key);
+
+    if (!stored && legacy_stored) {
+      stored = legacy_stored;
+      localStorage.setItem(market_key, legacy_stored);
+      localStorage.removeItem(legacy_key);
+    }
 
     if (stored) {
       try {
@@ -65,10 +71,6 @@ export function usePortfolio() {
 
     const market_key = getMarketStorageKey('curr_prices_cache', normalized_market);
     localStorage.setItem(market_key, JSON.stringify(prices.value[normalized_market]));
-
-    if (normalized_market === 'tw') {
-      localStorage.setItem('curr_prices_cache', JSON.stringify(prices.value[normalized_market]));
-    }
   };
 
   const getSaleCostRate = (market: Market, ticker: string): number => {

@@ -47,16 +47,20 @@ const chart_colors = ['#00d9ff', '#ff6b6b', '#4ecdc4', '#ffe66d', '#95e1d3', '#f
 function loadLastUpdate(market: Market): number | null {
   const market_key = `price_last_update_${market}`;
   const legacy_key = market === 'tw' ? 'price_last_update' : '';
-  const stored =
-    localStorage.getItem(market_key) || (legacy_key ? localStorage.getItem(legacy_key) : null);
+  const legacy_stored = legacy_key ? localStorage.getItem(legacy_key) : null;
+  let stored = localStorage.getItem(market_key);
+
+  if (!stored && legacy_stored) {
+    stored = legacy_stored;
+    localStorage.setItem(market_key, legacy_stored);
+    localStorage.removeItem(legacy_key);
+  }
+
   return stored ? parseInt(stored, 10) : null;
 }
 
 function saveLastUpdate(market: Market, ts: number): void {
   localStorage.setItem(`price_last_update_${market}`, ts.toString());
-  if (market === 'tw') {
-    localStorage.setItem('price_last_update', ts.toString());
-  }
 }
 
 function isMarketHours(market: Market): boolean {

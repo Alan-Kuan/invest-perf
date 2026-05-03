@@ -93,8 +93,15 @@ export function useStockList() {
 
     const cache_key = getMarketStorageKey('stock_list_cache', normalized_market);
     const legacy_key = normalized_market === 'tw' ? 'stock_list_cache' : '';
-    const stored =
-      localStorage.getItem(cache_key) || (legacy_key ? localStorage.getItem(legacy_key) : null);
+    const legacy_stored = legacy_key ? localStorage.getItem(legacy_key) : null;
+    let stored = localStorage.getItem(cache_key);
+
+    if (!stored && legacy_stored) {
+      stored = legacy_stored;
+      localStorage.setItem(cache_key, legacy_stored);
+      localStorage.removeItem(legacy_key);
+    }
+
     if (stored) {
       try {
         const cached_map = JSON.parse(stored) as Record<string, string>;
@@ -142,7 +149,6 @@ export function useStockList() {
         }
 
         localStorage.setItem(cache_key, JSON.stringify(stock_map));
-        localStorage.setItem('stock_list_cache', JSON.stringify(stock_map));
         stock_lists.value[normalized_market] = Object.entries(stock_map)
           .map(([ticker, name]) => ({
             ticker,
@@ -195,16 +201,20 @@ export function useStockList() {
     const exists = stock_lists.value[market].find(s => s.ticker === stock.ticker);
     if (!exists) {
       const cache_key = getMarketStorageKey('stock_list_cache', market);
-      const stored =
-        localStorage.getItem(cache_key) ||
-        (market === 'tw' ? localStorage.getItem('stock_list_cache') : null);
+      const legacy_key = market === 'tw' ? 'stock_list_cache' : '';
+      const legacy_stored = legacy_key ? localStorage.getItem(legacy_key) : null;
+      let stored = localStorage.getItem(cache_key);
+
+      if (!stored && legacy_stored) {
+        stored = legacy_stored;
+        localStorage.setItem(cache_key, legacy_stored);
+        localStorage.removeItem(legacy_key);
+      }
+
       const stock_map = stored ? (JSON.parse(stored) as Record<string, string>) : {};
 
       stock_map[stock.ticker] = stock.name || '';
       localStorage.setItem(cache_key, JSON.stringify(stock_map));
-      if (market === 'tw') {
-        localStorage.setItem('stock_list_cache', JSON.stringify(stock_map));
-      }
 
       stock_lists.value[market].push({
         ticker: stock.ticker,
