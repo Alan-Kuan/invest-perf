@@ -6,7 +6,7 @@ const historical_price_cache = new Map<string, Map<string, number>>();
 
 let last_yahoo_request_time = 0;
 let yahoo_request_queue: Promise<unknown> = Promise.resolve();
-const MIN_REQUEST_INTERVAL = 1700;
+const MIN_REQUEST_INTERVAL = 500; // allow up to 2 Yahoo API requests per second
 
 function delay(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
