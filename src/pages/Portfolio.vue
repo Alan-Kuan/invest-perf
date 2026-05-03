@@ -117,6 +117,17 @@ function getLastUpdateDisplay(market: Market): string | null {
   return new Date(update_ts).toLocaleTimeString();
 }
 
+function formatAmount(value: number, market: Market): string {
+  if (market === 'us') {
+    return value.toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  }
+
+  return value.toLocaleString();
+}
+
 function getDistributionChartData(summary: PortfolioSummary) {
   return {
     labels: summary.holdings.map(holding => holding.name || holding.ticker),
@@ -250,7 +261,7 @@ onUnmounted(() => {
             <v-card-text>
               <div class="flex items-center text-neutral-400">
                 預估淨損益
-                <v-tooltip text="考慮手續費與賣出估算成本">
+                <v-tooltip text="台股考慮手續費與交易稅，美股不計">
                   <template #activator="{ props }">
                     <v-icon size="x-small" class="ml-1" v-bind="props">mdi-help-circle</v-icon>
                   </template>
@@ -261,7 +272,7 @@ onUnmounted(() => {
                 :class="summaries[market.value].unrealized_gain >= 0 ? 'text-rise' : 'text-fall'"
               >
                 {{ summaries[market.value].unrealized_gain >= 0 ? '+' : ''
-                }}{{ summaries[market.value].unrealized_gain.toLocaleString() }}
+                }}{{ formatAmount(summaries[market.value].unrealized_gain, market.value) }}
               </div>
             </v-card-text>
           </v-card>
@@ -327,7 +338,9 @@ onUnmounted(() => {
                 <th class="text-right font-medium text-neutral-500 relative">
                   <div class="flex items-center justify-end">
                     預估淨損益
-                    <v-tooltip text="考慮手續費（0.1425%）與交易稅（股票：0.3%、ETF：0.1%)">
+                    <v-tooltip
+                      text="台股考慮手續費（0.1425%）與交易稅（股票：0.3%、ETF：0.1%)，美股不計"
+                    >
                       <template #activator="{ props }">
                         <v-icon size="x-small" class="absolute right-0" v-bind="props">
                           mdi-help-circle
@@ -357,7 +370,7 @@ onUnmounted(() => {
                   :class="(holding.unrealized_gain || 0) >= 0 ? 'text-rise' : 'text-fall'"
                 >
                   {{ (holding.unrealized_gain || 0) >= 0 ? '+' : ''
-                  }}{{ (holding.unrealized_gain || 0).toLocaleString() }}
+                  }}{{ formatAmount(holding.unrealized_gain || 0, market.value) }}
                 </td>
                 <td
                   class="text-right"

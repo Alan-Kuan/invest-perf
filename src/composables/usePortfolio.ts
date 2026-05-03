@@ -72,8 +72,12 @@ export function usePortfolio() {
   };
 
   const getSaleCostRate = (market: Market, ticker: string): number => {
+    if (market === 'us') {
+      return 1;
+    }
+
     const fee_rate = 0.001425;
-    const tax_rate = market === 'tw' ? (ticker.startsWith('00') ? 0.001 : 0.003) : 0;
+    const tax_rate = ticker.startsWith('00') ? 0.001 : 0.003;
     return 1 - fee_rate - tax_rate;
   };
 
@@ -122,9 +126,11 @@ export function usePortfolio() {
       const sale_cost_rate = getSaleCostRate(normalized_market, holding.ticker);
       holding.curr_price = current_price;
       holding.total_value = current_price * holding.shares;
-      holding.unrealized_gain = Math.round(
-        holding.total_value * sale_cost_rate - holding.total_cost,
-      );
+      const unrealized_gain = holding.total_value * sale_cost_rate - holding.total_cost;
+      holding.unrealized_gain =
+        normalized_market === 'us'
+          ? Math.round(unrealized_gain * 100) / 100
+          : Math.round(unrealized_gain);
       holding.unrealized_roi =
         holding.total_cost > 0 ? (holding.unrealized_gain / holding.total_cost) * 100 : 0;
     }
