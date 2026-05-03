@@ -508,9 +508,11 @@ async function refreshMarketData(market: Market): Promise<void> {
 }
 
 async function refreshAllMarkets(): Promise<void> {
-  for (const market of ['tw', 'us'] as Market[]) {
-    await refreshMarketData(market);
-  }
+  await Promise.all(
+    (['tw', 'us'] as Market[]).map(async market => {
+      await refreshMarketData(market);
+    }),
+  );
 }
 
 watch(

@@ -89,10 +89,11 @@ function startPriceUpdateTimer(): void {
 
   price_update_interval = setInterval(
     () => {
-      for (const market of ['tw', 'us'] as Market[]) {
-        if (isMarketHours(market) && summaries.value[market].holdings.length > 0) {
-          void fetchAllPrices(market);
-        }
+      const markets_to_refresh = (['tw', 'us'] as Market[]).filter(
+        market => isMarketHours(market) && summaries.value[market].holdings.length > 0,
+      );
+      if (markets_to_refresh.length > 0) {
+        void Promise.all(markets_to_refresh.map(market => fetchAllPrices(market)));
       }
     },
     5 * 60 * 1000,
@@ -186,10 +187,12 @@ async function fetchAllPrices(market: Market, force = false): Promise<void> {
 }
 
 async function refreshAllMarkets(force = false): Promise<void> {
-  for (const market of ['tw', 'us'] as Market[]) {
-    summaries.value[market] = getPortfolioSummary(market);
-    await fetchAllPrices(market, force);
-  }
+  await Promise.all(
+    (['tw', 'us'] as Market[]).map(async market => {
+      summaries.value[market] = getPortfolioSummary(market);
+      await fetchAllPrices(market, force);
+    }),
+  );
 }
 
 watch(
