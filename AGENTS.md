@@ -200,18 +200,6 @@ The project is a Vue 3 investment performance tracking web app.
 - Uses `virtual:uno.css` import (Vite virtual module)
 - Non-attributify mode (no `un-` prefix for group modifiers)
 
-## Legacy
-
-- Use this section to document features, caches, or compatibility paths that are planned for removal in a future update.
-- Mark legacy behavior clearly so the next maintenance pass can remove it safely.
-
-### Reminder
-
-- `annual_performance_cache` is renamed to `annual_performance_cache_tw`. Migration mechanism in place; remove in future update.
-- `stock_list_cache` is renamed to `stock_list_cache_tw`. Migration mechanism in place; remove in future update.
-- `curr_prices_cache` is renamed to `curr_prices_cache_tw`. Migration mechanism in place; remove in future update.
-- `price_last_update` is renamed to `price_last_update_tw`. Migration mechanism in place; remove in future update.
-
 ---
 
 _These guidelines are subject to evolution as the project grows.
