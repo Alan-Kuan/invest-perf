@@ -33,8 +33,8 @@ ChartJS.register(
 );
 
 const { is_ready, query } = useDatabase();
-const { getPortfolioSummary, updateCurrPricesCache } = usePortfolio();
-const { fetchHistoricalPrice, fetchPricesBatch } = useStockPrice();
+const { getPortfolioSummary } = usePortfolio();
+const { fetchHistoricalPrice } = useStockPrice();
 
 const is_loading = ref(false);
 const is_loading_market = ref<Record<Market, boolean>>({
@@ -423,20 +423,13 @@ function saveAnnualPerformanceCache(market: Market, data: AnnualData[]): void {
 }
 
 async function checkAndRecalculate(market: Market): Promise<void> {
-  const cache_key = getAnnualPerformanceCacheKey(market);
-  const stored = localStorage.getItem(cache_key);
-  const legacy_key = 'annual_performance_cache';
-  const legacy_stored = market === 'tw' ? localStorage.getItem(legacy_key) : null;
-
-  if (legacy_stored) {
-    if (!stored) {
-      localStorage.setItem(cache_key, legacy_stored);
-    }
-    localStorage.removeItem(legacy_key);
-  }
-
-  const cached =
-    stored || legacy_stored ? (JSON.parse(stored || legacy_stored!) as AnnualDataCache) : null;
+  const stored = localStorage.getItem(getAnnualPerformanceCacheKey(market));
+  const legacy_stored = market === 'tw' ? localStorage.getItem('annual_performance_cache') : null;
+  const cached = stored
+    ? (JSON.parse(stored) as AnnualDataCache)
+    : legacy_stored
+      ? (JSON.parse(legacy_stored) as AnnualDataCache)
+      : null;
 
   const latest_transaction = query(
     'SELECT MAX(date) as max_date FROM transactions WHERE market = ?',
@@ -464,16 +457,7 @@ async function checkAndRecalculate(market: Market): Promise<void> {
 }
 
 async function loadStatsForMarket(market: Market): Promise<void> {
-  let summary = getPortfolioSummary(market);
-  if (summary.holdings.length > 0) {
-    const current_prices = await fetchPricesBatch(
-      summary.holdings.map(holding => holding.ticker),
-      market,
-    );
-    updateCurrPricesCache(market, current_prices);
-    summary = getPortfolioSummary(market);
-  }
-
+  const summary = await getPortfolioSummary(market);
   const dividends = query(
     'SELECT * FROM dividends WHERE market = ? ORDER BY pay_date ASC, created_at ASC, id ASC',
     [market],

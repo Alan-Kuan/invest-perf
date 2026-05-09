@@ -1,7 +1,7 @@
 import { ref } from 'vue';
 
 import { buildCorsProxyUrl } from '../utils/cors-proxy';
-import { DEFAULT_MARKET, getMarketStorageKey, normalizeMarket, type Market } from '../utils/market';
+import { DEFAULT_MARKET, normalizeMarket, type Market } from '../utils/market';
 
 const US_STOCK_SOURCES = [
   'https://raw.githubusercontent.com/rreichel3/US-Stock-Symbols/main/nasdaq/nasdaq_full_tickers.json',
@@ -91,7 +91,7 @@ export function useStockList() {
 
     loading_states.value[normalized_market] = true;
 
-    const cache_key = getMarketStorageKey('stock_list_cache', normalized_market);
+    const cache_key = `stock_list_cache_${normalized_market}`;
     const legacy_key = normalized_market === 'tw' ? 'stock_list_cache' : '';
     const legacy_stored = legacy_key ? localStorage.getItem(legacy_key) : null;
     let stored = localStorage.getItem(cache_key);
@@ -200,7 +200,7 @@ export function useStockList() {
     const market = normalizeMarket(stock.market);
     const exists = stock_lists.value[market].find(s => s.ticker === stock.ticker);
     if (!exists) {
-      const cache_key = getMarketStorageKey('stock_list_cache', market);
+      const cache_key = `stock_list_cache_${market}`;
       const legacy_key = market === 'tw' ? 'stock_list_cache' : '';
       const legacy_stored = legacy_key ? localStorage.getItem(legacy_key) : null;
       let stored = localStorage.getItem(cache_key);

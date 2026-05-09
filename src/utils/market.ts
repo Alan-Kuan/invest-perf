@@ -26,7 +26,3 @@ export function normalizeMarket(value: unknown): Market {
 export function getMarketLabel(market: Market): string {
   return market === 'us' ? '美股' : '台股';
 }
-
-export function getMarketStorageKey(base_key: string, market: Market): string {
-  return `${base_key}_${market}`;
-}

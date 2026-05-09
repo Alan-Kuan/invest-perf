@@ -1,7 +1,8 @@
 import { ref } from 'vue';
 
-import { DEFAULT_MARKET, getMarketStorageKey, normalizeMarket, type Market } from '../utils/market';
+import { DEFAULT_MARKET, normalizeMarket, type Market } from '../utils/market';
 import { useDatabase } from './useDatabase';
+import { useStockPrice } from './useStockPrice';
 
 export interface Holding {
   ticker: string;
@@ -30,48 +31,12 @@ export interface PortfolioSummary {
 
 export function usePortfolio() {
   const { query } = useDatabase();
+  const { getCurrPriceBatch } = useStockPrice();
   const holdings = ref<Holding[]>([]);
   const prices = ref<Record<Market, PriceData>>({
     tw: {},
     us: {},
   });
-
-  const loadCurrPrices = (market: Market): PriceData => {
-    const normalized_market = normalizeMarket(market);
-    const market_key = getMarketStorageKey('curr_prices_cache', normalized_market);
-    const legacy_key = normalized_market === 'tw' ? 'curr_prices_cache' : '';
-    const legacy_stored = legacy_key ? localStorage.getItem(legacy_key) : null;
-    let stored = localStorage.getItem(market_key);
-
-    if (!stored && legacy_stored) {
-      stored = legacy_stored;
-      localStorage.setItem(market_key, legacy_stored);
-      localStorage.removeItem(legacy_key);
-    }
-
-    if (stored) {
-      try {
-        prices.value[normalized_market] = JSON.parse(stored) as PriceData;
-      } catch {
-        prices.value[normalized_market] = {};
-      }
-    } else {
-      prices.value[normalized_market] = {};
-    }
-
-    return prices.value[normalized_market];
-  };
-
-  const updateCurrPricesCache = (market: Market, new_prices: PriceData): void => {
-    const normalized_market = normalizeMarket(market);
-    prices.value[normalized_market] = {
-      ...prices.value[normalized_market],
-      ...new_prices,
-    };
-
-    const market_key = getMarketStorageKey('curr_prices_cache', normalized_market);
-    localStorage.setItem(market_key, JSON.stringify(prices.value[normalized_market]));
-  };
 
   const getSaleCostRate = (market: Market, ticker: string): number => {
     if (market === 'us') {
@@ -143,10 +108,22 @@ export function usePortfolio() {
     };
   };
 
-  const getPortfolioSummary = (market: Market = DEFAULT_MARKET): PortfolioSummary => {
+  const getPortfolioSummary = async (
+    market: Market = DEFAULT_MARKET,
+    force = false,
+  ): Promise<PortfolioSummary> => {
     const normalized_market = normalizeMarket(market);
-    loadCurrPrices(normalized_market);
-    const { holdings: market_holdings, total_realized } = loadHoldings(normalized_market);
+    const { holdings: initial_holdings, total_realized } = loadHoldings(normalized_market);
+
+    const tickers = initial_holdings.map(h => h.ticker);
+    const latest_prices = await getCurrPriceBatch(tickers, normalized_market, force);
+
+    prices.value[normalized_market] = {
+      ...prices.value[normalized_market],
+      ...latest_prices,
+    };
+
+    const { holdings: market_holdings } = loadHoldings(normalized_market);
     holdings.value = market_holdings;
 
     return {
@@ -165,7 +142,6 @@ export function usePortfolio() {
   return {
     holdings,
     prices,
-    updateCurrPricesCache,
     getPortfolioSummary,
   };
 }

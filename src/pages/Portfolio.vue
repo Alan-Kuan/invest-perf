@@ -5,14 +5,13 @@ import { Doughnut } from 'vue-chartjs';
 
 import { useDatabase } from '../composables/useDatabase';
 import { usePortfolio, type PortfolioSummary } from '../composables/usePortfolio';
-import { useStockPrice } from '../composables/useStockPrice';
+import { loadCurrentPriceTimestamps } from '../composables/useStockPrice';
 import { MARKET_OPTIONS, type Market } from '../utils/market';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
 const { is_ready } = useDatabase();
-const { getPortfolioSummary, updateCurrPricesCache } = usePortfolio();
-const { fetchPricesBatch } = useStockPrice();
+const { getPortfolioSummary } = usePortfolio();
 
 function createEmptySummary(market: Market): PortfolioSummary {
   return {
@@ -36,57 +35,13 @@ const is_loading_prices = ref<Record<Market, boolean>>({
 });
 
 const last_updates = ref<Record<Market, number | null>>({
-  tw: loadLastUpdate('tw'),
-  us: loadLastUpdate('us'),
+  tw: loadCurrentPriceTimestamps('tw'),
+  us: loadCurrentPriceTimestamps('us'),
 });
 
 let price_update_interval: ReturnType<typeof setInterval> | null = null;
 
 const chart_colors = ['#00d9ff', '#ff6b6b', '#4ecdc4', '#ffe66d', '#95e1d3', '#f38181'];
-
-function loadLastUpdate(market: Market): number | null {
-  const market_key = `price_last_update_${market}`;
-  const legacy_key = market === 'tw' ? 'price_last_update' : '';
-  const legacy_stored = legacy_key ? localStorage.getItem(legacy_key) : null;
-  let stored = localStorage.getItem(market_key);
-
-  if (!stored && legacy_stored) {
-    stored = legacy_stored;
-    localStorage.setItem(market_key, legacy_stored);
-    localStorage.removeItem(legacy_key);
-  }
-
-  return stored ? parseInt(stored, 10) : null;
-}
-
-function saveLastUpdate(market: Market, ts: number): void {
-  localStorage.setItem(`price_last_update_${market}`, ts.toString());
-}
-
-function isMarketHours(market: Market): boolean {
-  const time_zone = market === 'us' ? 'America/New_York' : 'Asia/Taipei';
-  const now = new Date();
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: time_zone,
-    hour12: false,
-    weekday: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).formatToParts(now);
-
-  const weekday = parts.find(part => part.type === 'weekday')?.value || '';
-  const hour = parseInt(parts.find(part => part.type === 'hour')?.value || '0', 10);
-  const minute = parseInt(parts.find(part => part.type === 'minute')?.value || '0', 10);
-  const time_in_minutes = hour * 60 + minute;
-
-  if (weekday === 'Sat' || weekday === 'Sun') return false;
-
-  if (market === 'us') {
-    return time_in_minutes >= 9 * 60 + 30 && time_in_minutes <= 16 * 60;
-  }
-
-  return time_in_minutes >= 9 * 60 && time_in_minutes <= 13 * 60 + 30;
-}
 
 function startPriceUpdateTimer(): void {
   if (price_update_interval) return;
@@ -94,11 +49,9 @@ function startPriceUpdateTimer(): void {
   price_update_interval = setInterval(
     () => {
       const markets_to_refresh = (['tw', 'us'] as Market[]).filter(
-        market => isMarketHours(market) && summaries.value[market].holdings.length > 0,
+        market => summaries.value[market].holdings.length > 0,
       );
-      if (markets_to_refresh.length > 0) {
-        void Promise.all(markets_to_refresh.map(market => fetchAllPrices(market)));
-      }
+      void Promise.all(markets_to_refresh.map(market => updateSummary(market)));
     },
     5 * 60 * 1000,
   );
@@ -165,38 +118,17 @@ function getDistributionChartOptions(summary: PortfolioSummary) {
   };
 }
 
-async function fetchAllPrices(market: Market, force = false): Promise<void> {
-  const summary = summaries.value[market];
-  if (summary.holdings.length === 0) return;
-
-  const now = Date.now();
-  const last_ts = last_updates.value[market];
-  if (!force && last_ts && !isMarketHours(market)) {
-    const hours_since_update = (now - last_ts) / (1000 * 60 * 60);
-    if (hours_since_update < 8) return;
-  }
+async function updateSummary(market: Market, force = false): Promise<void> {
+  if (is_loading_prices.value[market]) return;
 
   is_loading_prices.value[market] = true;
 
   try {
-    const tickers = summary.holdings.map(holding => holding.ticker);
-    const prices = await fetchPricesBatch(tickers, market);
-    updateCurrPricesCache(market, prices);
-    summaries.value[market] = getPortfolioSummary(market);
-    last_updates.value[market] = now;
-    saveLastUpdate(market, now);
+    summaries.value[market] = await getPortfolioSummary(market, force);
+    last_updates.value[market] = loadCurrentPriceTimestamps(market);
   } finally {
     is_loading_prices.value[market] = false;
   }
-}
-
-async function refreshAllMarkets(force = false): Promise<void> {
-  await Promise.all(
-    (['tw', 'us'] as Market[]).map(async market => {
-      summaries.value[market] = getPortfolioSummary(market);
-      await fetchAllPrices(market, force);
-    }),
-  );
 }
 
 watch(
@@ -204,10 +136,8 @@ watch(
   async ready => {
     if (!ready) return;
 
-    await refreshAllMarkets();
-    if (isMarketHours('tw') || isMarketHours('us')) {
-      startPriceUpdateTimer();
-    }
+    void Promise.all(['tw', 'us'].map(market => updateSummary(market as Market)));
+    startPriceUpdateTimer();
   },
   { immediate: true },
 );
@@ -239,7 +169,7 @@ onUnmounted(() => {
             variant="tonal"
             size="small"
             :loading="is_loading_prices[market.value]"
-            @click="fetchAllPrices(market.value, true)"
+            @click="updateSummary(market.value, true)"
           >
             更新現價
           </v-btn>
