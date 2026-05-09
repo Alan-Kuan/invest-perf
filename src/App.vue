@@ -2,6 +2,7 @@
 import { computed, onMounted, provide, ref } from 'vue';
 
 import { useDatabase } from './composables/useDatabase';
+import { clearStore } from './db';
 import {
   applyRiseFallColorScheme,
   getRiseFallColorSchemeLabel,
@@ -110,19 +111,18 @@ async function handleClearCache() {
   if (!(await showConfirm('確定要清除績效快取、股票現價快取與股票名稱快取嗎？'))) {
     return;
   }
-  localStorage.removeItem('annual_performance_cache');
-  localStorage.removeItem('annual_performance_cache_tw');
-  localStorage.removeItem('annual_performance_cache_us');
-  localStorage.removeItem('curr_prices_cache');
-  localStorage.removeItem('curr_prices_cache_tw');
-  localStorage.removeItem('curr_prices_cache_us');
-  localStorage.removeItem('price_last_update');
-  localStorage.removeItem('price_last_update_tw');
-  localStorage.removeItem('price_last_update_us');
-  localStorage.removeItem('stock_list_cache');
-  localStorage.removeItem('stock_list_cache_tw');
-  localStorage.removeItem('stock_list_cache_us');
+
   localStorage.removeItem('rise_fall_color_scheme');
+  localStorage.removeItem('curr_prices_timestamp_tw');
+  localStorage.removeItem('curr_prices_timestamp_us');
+  localStorage.removeItem('annual_perf_timestamp_tw');
+  localStorage.removeItem('annual_perf_timestamp_us');
+
+  await clearStore('stock_list');
+  await clearStore('curr_prices');
+  await clearStore('historical_prices');
+  await clearStore('annual_performance');
+
   showSnackbar('快取已清除');
 }
 </script>

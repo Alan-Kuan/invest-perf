@@ -18,7 +18,20 @@ import { Bar, Line } from 'vue-chartjs';
 import { useDatabase } from '../composables/useDatabase';
 import { usePortfolio } from '../composables/usePortfolio';
 import { useStockPrice } from '../composables/useStockPrice';
+import { getStoreItem, setStoreItem } from '../db';
 import { MARKET_OPTIONS, type Market } from '../utils/market';
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  LineElement,
+  PointElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler,
+);
 
 ChartJS.register(
   CategoryScale,
@@ -402,7 +415,7 @@ async function loadAnnualPerformanceForMarket(market: Market): Promise<void> {
   }
 
   annual_performance.value[market] = annual_data_list;
-  saveAnnualPerformanceCache(market, annual_data_list);
+  await saveAnnualPerformanceCache(market, annual_data_list);
 }
 
 interface AnnualDataCache {
@@ -410,26 +423,18 @@ interface AnnualDataCache {
   calculated_at: string;
 }
 
-function getAnnualPerformanceCacheKey(market: Market): string {
-  return `annual_performance_cache_${market}`;
-}
-
-function saveAnnualPerformanceCache(market: Market, data: AnnualData[]): void {
-  const cache: AnnualDataCache = {
-    data,
-    calculated_at: new Date().toISOString().split('T')[0],
-  };
-  localStorage.setItem(getAnnualPerformanceCacheKey(market), JSON.stringify(cache));
+async function saveAnnualPerformanceCache(market: Market, data: AnnualData[]): Promise<void> {
+  await setStoreItem('annual_performance', market, data);
+  const timestamp_key = `annual_perf_timestamp_${market}`;
+  localStorage.setItem(timestamp_key, new Date().toISOString().split('T')[0]);
 }
 
 async function checkAndRecalculate(market: Market): Promise<void> {
-  const stored = localStorage.getItem(getAnnualPerformanceCacheKey(market));
-  const legacy_stored = market === 'tw' ? localStorage.getItem('annual_performance_cache') : null;
-  const cached = stored
-    ? (JSON.parse(stored) as AnnualDataCache)
-    : legacy_stored
-      ? (JSON.parse(legacy_stored) as AnnualDataCache)
-      : null;
+  const timestamp_key = `annual_perf_timestamp_${market}`;
+  const calculated_at = localStorage.getItem(timestamp_key);
+  const cached_data = (await getStoreItem('annual_performance', market)) as
+    | AnnualData[]
+    | undefined;
 
   const latest_transaction = query(
     'SELECT MAX(date) as max_date FROM transactions WHERE market = ?',
@@ -443,17 +448,17 @@ async function checkAndRecalculate(market: Market): Promise<void> {
   const latest_data_date = latest_transaction[0]?.max_date || '';
   const latest_dividend_date = latest_dividend[0]?.max_date || '';
 
-  if (!cached) {
+  if (!calculated_at || !cached_data) {
     await loadAnnualPerformanceForMarket(market);
     return;
   }
 
-  if (latest_data_date > cached.calculated_at || latest_dividend_date > cached.calculated_at) {
+  if (latest_data_date > calculated_at || latest_dividend_date > calculated_at) {
     await loadAnnualPerformanceForMarket(market);
     return;
   }
 
-  annual_performance.value[market] = cached.data;
+  annual_performance.value[market] = cached_data;
 }
 
 async function loadStatsForMarket(market: Market): Promise<void> {

@@ -1,5 +1,6 @@
 import { ref } from 'vue';
 
+import { getStoreItem, setStoreItem } from '../db';
 import { buildCorsProxyUrl } from '../utils/cors-proxy';
 import { DEFAULT_MARKET, normalizeMarket, type Market } from '../utils/market';
 
@@ -91,21 +92,13 @@ export function useStockList() {
 
     loading_states.value[normalized_market] = true;
 
-    const cache_key = `stock_list_cache_${normalized_market}`;
-    const legacy_key = normalized_market === 'tw' ? 'stock_list_cache' : '';
-    const legacy_stored = legacy_key ? localStorage.getItem(legacy_key) : null;
-    let stored = localStorage.getItem(cache_key);
+    try {
+      const stored = (await getStoreItem('stock_list', normalized_market)) as
+        | Record<string, string>
+        | undefined;
 
-    if (!stored && legacy_stored) {
-      stored = legacy_stored;
-      localStorage.setItem(cache_key, legacy_stored);
-      localStorage.removeItem(legacy_key);
-    }
-
-    if (stored) {
-      try {
-        const cached_map = JSON.parse(stored) as Record<string, string>;
-        const cached_list = Object.entries(cached_map)
+      if (stored) {
+        const cached_list = Object.entries(stored)
           .map(([ticker, name]) => ({
             ticker,
             name,
@@ -118,9 +111,9 @@ export function useStockList() {
           loading_states.value[normalized_market] = false;
           return stock_lists.value[normalized_market];
         }
-      } catch {
-        // continue to fetch
       }
+    } catch (e) {
+      console.error('Failed to load stock list from IDB:', e);
     }
 
     try {
@@ -148,7 +141,7 @@ export function useStockList() {
           }
         }
 
-        localStorage.setItem(cache_key, JSON.stringify(stock_map));
+        await setStoreItem('stock_list', normalized_market, stock_map);
         stock_lists.value[normalized_market] = Object.entries(stock_map)
           .map(([ticker, name]) => ({
             ticker,
@@ -177,7 +170,7 @@ export function useStockList() {
           }
         }
 
-        localStorage.setItem(cache_key, JSON.stringify(stock_map));
+        await setStoreItem('stock_list', normalized_market, stock_map);
         stock_lists.value[normalized_market] = Object.entries(stock_map)
           .map(([ticker, name]) => ({
             ticker,
@@ -200,28 +193,24 @@ export function useStockList() {
     const market = normalizeMarket(stock.market);
     const exists = stock_lists.value[market].find(s => s.ticker === stock.ticker);
     if (!exists) {
-      const cache_key = `stock_list_cache_${market}`;
-      const legacy_key = market === 'tw' ? 'stock_list_cache' : '';
-      const legacy_stored = legacy_key ? localStorage.getItem(legacy_key) : null;
-      let stored = localStorage.getItem(cache_key);
+      try {
+        const stored = (await getStoreItem('stock_list', market)) as
+          | Record<string, string>
+          | undefined;
+        const stock_map = stored ?? {};
 
-      if (!stored && legacy_stored) {
-        stored = legacy_stored;
-        localStorage.setItem(cache_key, legacy_stored);
-        localStorage.removeItem(legacy_key);
+        stock_map[stock.ticker] = stock.name || '';
+        await setStoreItem('stock_list', market, stock_map);
+
+        stock_lists.value[market].push({
+          ticker: stock.ticker,
+          name: stock.name || '',
+          market,
+        });
+        stock_lists.value[market].sort((a, b) => a.ticker.localeCompare(b.ticker));
+      } catch (e) {
+        console.error('Failed to add stock to IDB:', e);
       }
-
-      const stock_map = stored ? (JSON.parse(stored) as Record<string, string>) : {};
-
-      stock_map[stock.ticker] = stock.name || '';
-      localStorage.setItem(cache_key, JSON.stringify(stock_map));
-
-      stock_lists.value[market].push({
-        ticker: stock.ticker,
-        name: stock.name || '',
-        market,
-      });
-      stock_lists.value[market].sort((a, b) => a.ticker.localeCompare(b.ticker));
     }
   };
 

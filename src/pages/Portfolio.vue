@@ -35,8 +35,8 @@ const is_loading_prices = ref<Record<Market, boolean>>({
 });
 
 const last_updates = ref<Record<Market, number | null>>({
-  tw: loadCurrentPriceTimestamps('tw'),
-  us: loadCurrentPriceTimestamps('us'),
+  tw: null,
+  us: null,
 });
 
 let price_update_interval: ReturnType<typeof setInterval> | null = null;

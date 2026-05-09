@@ -1,6 +1,6 @@
+import { getStoreItem, setStoreItem } from '../db';
 import { buildCorsProxyUrl } from '../utils/cors-proxy';
 import { DEFAULT_MARKET, normalizeMarket, type Market } from '../utils/market';
-import { useDatabase } from './useDatabase';
 
 const historical_price_cache = new Map<string, Map<string, number>>();
 
@@ -10,16 +10,13 @@ const MIN_REQUEST_INTERVAL = 500; // allow up to 2 Yahoo API requests per second
 const MARKET_HOURS_UPDATE_INTERVAL = 5 * 60 * 1000; // 5 minutes during market hours
 const AFTER_HOURS_UPDATE_INTERVAL = 8 * 60 * 60 * 1000; // 8 hours after market hours
 
-function loadCurrentPriceCache(market: Market): Record<string, number> {
+async function loadCurrentPriceCache(market: Market): Promise<Record<string, number>> {
   const normalized_market = normalizeMarket(market);
-  const cache_key = `curr_prices_cache_${normalized_market}`;
-  const legacy_key = normalized_market === 'tw' ? 'curr_prices_cache' : '';
-  const stored =
-    localStorage.getItem(cache_key) || (legacy_key ? localStorage.getItem(legacy_key) : null);
-  if (!stored) return {};
-
   try {
-    return JSON.parse(stored) as Record<string, number>;
+    const data = (await getStoreItem('curr_prices', normalized_market)) as
+      | Record<string, number>
+      | undefined;
+    return data ?? {};
   } catch {
     return {};
   }
@@ -27,7 +24,7 @@ function loadCurrentPriceCache(market: Market): Record<string, number> {
 
 export function loadCurrentPriceTimestamps(market: Market): number | null {
   const normalized_market = normalizeMarket(market);
-  const timestamp_key = `curr_prices_cache_timestamps_${normalized_market}`;
+  const timestamp_key = `curr_prices_timestamp_${normalized_market}`;
   const stored = localStorage.getItem(timestamp_key);
   if (!stored) return null;
 
@@ -36,19 +33,28 @@ export function loadCurrentPriceTimestamps(market: Market): number | null {
 
 type PriceData = Record<string, number>;
 
-function updateCurrPricesCache(new_prices: PriceData, market: Market): void {
+async function updateCurrPricesCache(new_prices: PriceData, market: Market): Promise<void> {
   const normalized_market = normalizeMarket(market);
-  const cache_key = `curr_prices_cache_${normalized_market}`;
-  const timestamp_key = `curr_prices_cache_timestamps_${normalized_market}`;
 
-  const previous_cache = loadCurrentPriceCache(normalized_market);
-  const merged_cache = {
-    ...previous_cache,
-    ...new_prices,
-  };
+  try {
+    const stored = (await getStoreItem('curr_prices', normalized_market)) as
+      | Record<string, number>
+      | undefined;
+    const previous_cache = stored ?? {};
+    const merged_cache = {
+      ...previous_cache,
+      ...new_prices,
+    };
 
-  localStorage.setItem(cache_key, JSON.stringify(merged_cache));
-  localStorage.setItem(timestamp_key, Date.now().toString());
+    // Save the map directly to IDB
+    await setStoreItem('curr_prices', normalized_market, merged_cache);
+
+    // Timestamp goes to localStorage for sync access
+    const timestamp_key = `curr_prices_timestamp_${normalized_market}`;
+    localStorage.setItem(timestamp_key, Date.now().toString());
+  } catch (e) {
+    console.error('Failed to update current price cache:', e);
+  }
 }
 
 function isCurrentPriceCacheExpired(market: Market, timestamp: number): boolean {
@@ -119,30 +125,39 @@ function scheduleYahooRequest<T>(request: () => Promise<T>): Promise<T> {
 }
 
 export function useStockPrice() {
-  const { query, execute } = useDatabase();
-
-  const loadFromDb = (market: Market, ticker: string, date: string): number | null => {
-    const results = query(
-      'SELECT price FROM historical_prices WHERE market = ? AND ticker = ? AND date = ?',
-      [market, ticker, date],
-    );
-    if (results.length > 0 && results[0].price !== null) {
-      return results[0].price as number;
+  const loadFromStorage = async (
+    market: Market,
+    ticker: string,
+    date: string,
+  ): Promise<number | null> => {
+    const key = `${market}_${ticker}`;
+    try {
+      const data = (await getStoreItem('historical_prices', key)) as
+        | Record<string, number>
+        | undefined;
+      return data?.[date] ?? null;
+    } catch {
+      return null;
     }
-    return null;
   };
 
-  const saveToDb = async (
+  const saveToStorage = async (
     market: Market,
     ticker: string,
     date: string,
     price: number,
   ): Promise<void> => {
-    await execute(
-      `INSERT OR REPLACE INTO historical_prices (market, ticker, date, price, updated_at)
-       VALUES (?, ?, ?, ?, datetime('now'))`,
-      [market, ticker, date, price],
-    );
+    const key = `${market}_${ticker}`;
+    try {
+      const stored = (await getStoreItem('historical_prices', key)) as
+        | Record<string, number>
+        | undefined;
+      const data: Record<string, number> = stored ?? {};
+      data[date] = price;
+      await setStoreItem('historical_prices', key, data);
+    } catch (e) {
+      console.error('Failed to save historical price to IDB:', e);
+    }
   };
 
   const getHistoricalCacheKey = (market: Market, ticker: string): string => {
@@ -155,8 +170,8 @@ export function useStockPrice() {
     force = false,
   ): Promise<number | null> => {
     const normalized_market = normalizeMarket(market);
-    const cache_prices = loadCurrentPriceCache(normalized_market);
-    const last_cached = loadCurrentPriceTimestamps(normalized_market);
+    const cache_prices = await loadCurrentPriceCache(normalized_market);
+    const last_cached = await loadCurrentPriceTimestamps(normalized_market);
 
     if (
       !force &&
@@ -235,7 +250,7 @@ export function useStockPrice() {
       }
 
       if (Object.keys(prices).length > 0) {
-        updateCurrPricesCache(prices, normalized_market);
+        await updateCurrPricesCache(prices, normalized_market);
       }
 
       return prices;
@@ -312,7 +327,7 @@ export function useStockPrice() {
       return cached;
     }
 
-    const db_price = loadFromDb(normalized_market, ticker, date);
+    const db_price = await loadFromStorage(normalized_market, ticker, date);
     if (db_price !== null) {
       if (!historical_price_cache.has(cache_key)) {
         historical_price_cache.set(cache_key, new Map());
@@ -328,7 +343,7 @@ export function useStockPrice() {
         historical_price_cache.set(cache_key, new Map());
       }
       historical_price_cache.get(cache_key)!.set(date, price);
-      await saveToDb(normalized_market, ticker, date, price);
+      await saveToStorage(normalized_market, ticker, date, price);
       return price;
     }
 
