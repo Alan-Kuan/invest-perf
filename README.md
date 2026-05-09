@@ -1,16 +1,20 @@
 # invest-perf
 
-用來計算台股投資績效的簡易網站
+用來計算台股與美股投資績效的簡易網站
 
 ## 介紹
 
 - 使用者可以自己新增交易紀錄和股利紀錄來得到計算後的報酬率等等資訊
 - 資料完全儲存在瀏覽器的本地空間裡，並不會上傳到某個遠端的機器
-- 使用到臺灣證券交易所提供的 OpenAPI、官方網站和資訊系統的 API
+- 使用到臺灣證券交易所提供的 Open API 和 Yahoo Finance 的 API
   - 在呼叫的時候會刻意節流以避免突破使用頻率上限
   - 使用了 corsproxy.io 來規避 CORS 問題
+- 台股代號清單來自證交所 OpenAPI；美股代號清單來自 [rreichel3/US-Stock-Symbols](https://github.com/rreichel3/US-Stock-Symbols)
+- 即時與歷史股價透過 Yahoo Finance 的 API 取得
 
 ## 背景
+
+> Written on 04/26, 2026
 
 這只是我為了體驗看看 vibe coding 而興起的一個專案。
 起初我使用 [OpenCode](https://opencode.ai) 來快速幫我生成前端，並且幫我設計投資績效可以呈現的內容。
