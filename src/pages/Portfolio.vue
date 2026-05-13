@@ -9,6 +9,7 @@ import {
   loadCurrentPriceTimestamps,
   shouldRefreshCurrentPriceCache,
 } from '../composables/useStockPrice';
+import { getChartColorPalette } from '../utils/chart-colors';
 import { MARKET_OPTIONS, type Market } from '../utils/market';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
@@ -43,8 +44,6 @@ const last_updates = ref<Record<Market, number | null>>({
 });
 
 let price_update_interval: ReturnType<typeof setInterval> | null = null;
-
-const chart_colors = ['#00d9ff', '#ff6b6b', '#4ecdc4', '#ffe66d', '#95e1d3', '#f38181'];
 
 function startPriceUpdateTimer(): void {
   if (price_update_interval) return;
@@ -95,7 +94,7 @@ function getDistributionChartData(summary: PortfolioSummary) {
     datasets: [
       {
         data: summary.holdings.map(holding => holding.total_value || 0),
-        backgroundColor: chart_colors,
+        backgroundColor: getChartColorPalette(summary.holdings.length),
       },
     ],
   };
