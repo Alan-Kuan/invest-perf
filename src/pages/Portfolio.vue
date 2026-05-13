@@ -5,7 +5,10 @@ import { Doughnut } from 'vue-chartjs';
 
 import { useDatabase } from '../composables/useDatabase';
 import { usePortfolio, type PortfolioSummary } from '../composables/usePortfolio';
-import { loadCurrentPriceTimestamps } from '../composables/useStockPrice';
+import {
+  loadCurrentPriceTimestamps,
+  shouldRefreshCurrentPriceCache,
+} from '../composables/useStockPrice';
 import { MARKET_OPTIONS, type Market } from '../utils/market';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
@@ -49,9 +52,10 @@ function startPriceUpdateTimer(): void {
   price_update_interval = setInterval(
     () => {
       const markets_to_refresh = (['tw', 'us'] as Market[]).filter(
-        market => summaries.value[market].holdings.length > 0,
+        market =>
+          summaries.value[market].holdings.length > 0 && shouldRefreshCurrentPriceCache(market),
       );
-      void Promise.all(markets_to_refresh.map(market => updateSummary(market)));
+      void Promise.all(markets_to_refresh.map(market => updateSummary(market, true)));
     },
     5 * 60 * 1000,
   );
@@ -124,7 +128,7 @@ async function updateSummary(market: Market, force = false): Promise<void> {
   is_loading_prices.value[market] = true;
 
   try {
-    summaries.value[market] = await getPortfolioSummary(market, force);
+    summaries.value[market] = await getPortfolioSummary(market, { force });
     last_updates.value[market] = loadCurrentPriceTimestamps(market);
   } finally {
     is_loading_prices.value[market] = false;
@@ -136,7 +140,10 @@ watch(
   async ready => {
     if (!ready) return;
 
-    void Promise.all(['tw', 'us'].map(market => updateSummary(market as Market)));
+    await Promise.all((['tw', 'us'] as Market[]).map(market => updateSummary(market)));
+
+    const markets_to_refresh = (['tw', 'us'] as Market[]).filter(shouldRefreshCurrentPriceCache);
+    void Promise.all(markets_to_refresh.map(market => updateSummary(market, true)));
     startPriceUpdateTimer();
   },
   { immediate: true },

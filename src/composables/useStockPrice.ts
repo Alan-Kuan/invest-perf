@@ -10,7 +10,7 @@ const MIN_REQUEST_INTERVAL = 500; // allow up to 2 Yahoo API requests per second
 const MARKET_HOURS_UPDATE_INTERVAL = 5 * 60 * 1000; // 5 minutes during market hours
 const AFTER_HOURS_UPDATE_INTERVAL = 8 * 60 * 60 * 1000; // 8 hours after market hours
 
-async function loadCurrentPriceCache(market: Market): Promise<Record<string, number>> {
+export async function loadCurrentPriceCache(market: Market): Promise<Record<string, number>> {
   const normalized_market = normalizeMarket(market);
   try {
     const data = (await getStoreItem('curr_prices', normalized_market)) as
@@ -29,44 +29,6 @@ export function loadCurrentPriceTimestamps(market: Market): number | null {
   if (!stored) return null;
 
   return parseInt(stored, 10) || null;
-}
-
-type PriceData = Record<string, number>;
-
-async function updateCurrPricesCache(new_prices: PriceData, market: Market): Promise<void> {
-  const normalized_market = normalizeMarket(market);
-
-  try {
-    const stored = (await getStoreItem('curr_prices', normalized_market)) as
-      | Record<string, number>
-      | undefined;
-    const previous_cache = stored ?? {};
-    const merged_cache = {
-      ...previous_cache,
-      ...new_prices,
-    };
-
-    // Save the map directly to IDB
-    await setStoreItem('curr_prices', normalized_market, merged_cache);
-
-    // Timestamp goes to localStorage for sync access
-    const timestamp_key = `curr_prices_timestamp_${normalized_market}`;
-    localStorage.setItem(timestamp_key, Date.now().toString());
-  } catch (e) {
-    console.error('Failed to update current price cache:', e);
-  }
-}
-
-function isCurrentPriceCacheExpired(market: Market, timestamp: number): boolean {
-  const now = Date.now();
-  const interval = isMarketHours(market)
-    ? MARKET_HOURS_UPDATE_INTERVAL
-    : AFTER_HOURS_UPDATE_INTERVAL;
-  return now - timestamp > interval;
-}
-
-function delay(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 function isMarketHours(market: Market): boolean {
@@ -92,6 +54,52 @@ function isMarketHours(market: Market): boolean {
   }
 
   return time_in_minutes >= 9 * 60 && time_in_minutes <= 13 * 60 + 30;
+}
+
+export function shouldRefreshCurrentPriceCache(market: Market): boolean {
+  const timestamp = loadCurrentPriceTimestamps(market);
+
+  if (timestamp === null) return true;
+
+  const now = Date.now();
+  const interval = isMarketHours(market)
+    ? MARKET_HOURS_UPDATE_INTERVAL
+    : AFTER_HOURS_UPDATE_INTERVAL;
+
+  return now - timestamp > interval;
+}
+
+type PriceData = Record<string, number>;
+
+export async function updateCurrentPriceCache(
+  new_prices: PriceData,
+  market: Market,
+): Promise<void> {
+  const normalized_market = normalizeMarket(market);
+
+  try {
+    const stored = (await getStoreItem('curr_prices', normalized_market)) as
+      | Record<string, number>
+      | undefined;
+    const previous_cache = stored ?? {};
+    const merged_cache = {
+      ...previous_cache,
+      ...new_prices,
+    };
+
+    // Save the map directly to IDB
+    await setStoreItem('curr_prices', normalized_market, merged_cache);
+
+    // Timestamp goes to localStorage for sync access
+    const timestamp_key = `curr_prices_timestamp_${normalized_market}`;
+    localStorage.setItem(timestamp_key, Date.now().toString());
+  } catch (e) {
+    console.error('Failed to update current price cache:', e);
+  }
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 function toYahooSymbol(ticker: string, market?: Market): string {
@@ -167,21 +175,8 @@ export function useStockPrice() {
   const getCurrPrice = async (
     ticker: string,
     market: Market = DEFAULT_MARKET,
-    force = false,
   ): Promise<number | null> => {
     const normalized_market = normalizeMarket(market);
-    const cache_prices = await loadCurrentPriceCache(normalized_market);
-    const last_cached = await loadCurrentPriceTimestamps(normalized_market);
-
-    if (
-      !force &&
-      typeof cache_prices[ticker] === 'number' &&
-      last_cached !== null &&
-      !isCurrentPriceCacheExpired(normalized_market, last_cached)
-    ) {
-      return cache_prices[ticker];
-    }
-
     const yahoo_symbol = toYahooSymbol(ticker, normalized_market);
     const chart_url = buildCorsProxyUrl(
       `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahoo_symbol)}?range=1d&interval=1m&includePrePost=true&events=div,splits`,
@@ -233,7 +228,6 @@ export function useStockPrice() {
   const getCurrPriceBatch = async (
     tickers: string[],
     market: Market = DEFAULT_MARKET,
-    force = false,
   ): Promise<Record<string, number>> => {
     if (tickers.length === 0) return {};
 
@@ -243,14 +237,10 @@ export function useStockPrice() {
       const prices: Record<string, number> = {};
 
       for (const ticker of tickers) {
-        const price = await getCurrPrice(ticker, normalized_market, force);
+        const price = await getCurrPrice(ticker, normalized_market);
         if (price !== null) {
           prices[ticker] = price;
         }
-      }
-
-      if (Object.keys(prices).length > 0) {
-        await updateCurrPricesCache(prices, normalized_market);
       }
 
       return prices;
@@ -353,5 +343,7 @@ export function useStockPrice() {
   return {
     getCurrPriceBatch,
     fetchHistoricalPrice,
+    loadCurrentPriceCache,
+    updateCurrentPriceCache,
   };
 }

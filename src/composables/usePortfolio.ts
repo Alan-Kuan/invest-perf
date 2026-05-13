@@ -2,7 +2,7 @@ import { ref } from 'vue';
 
 import { DEFAULT_MARKET, normalizeMarket, type Market } from '../utils/market';
 import { useDatabase } from './useDatabase';
-import { useStockPrice } from './useStockPrice';
+import { loadCurrentPriceCache, updateCurrentPriceCache, useStockPrice } from './useStockPrice';
 
 export interface Holding {
   ticker: string;
@@ -18,6 +18,10 @@ export interface Holding {
 
 interface PriceData {
   [ticker: string]: number;
+}
+
+interface PortfolioPriceOptions {
+  force?: boolean;
 }
 
 export interface PortfolioSummary {
@@ -108,22 +112,12 @@ export function usePortfolio() {
     };
   };
 
-  const getPortfolioSummary = async (
-    market: Market = DEFAULT_MARKET,
-    force = false,
-  ): Promise<PortfolioSummary> => {
-    const normalized_market = normalizeMarket(market);
-    const { holdings: initial_holdings, total_realized } = loadHoldings(normalized_market);
-
-    const tickers = initial_holdings.map(h => h.ticker);
-    const latest_prices = await getCurrPriceBatch(tickers, normalized_market, force);
-
-    prices.value[normalized_market] = {
-      ...prices.value[normalized_market],
-      ...latest_prices,
-    };
-
+  const buildPortfolioSummary = (
+    normalized_market: Market,
+    total_realized: number,
+  ): PortfolioSummary => {
     const { holdings: market_holdings } = loadHoldings(normalized_market);
+
     holdings.value = market_holdings;
 
     return {
@@ -137,6 +131,33 @@ export function usePortfolio() {
         0,
       ),
     };
+  };
+
+  const getPortfolioSummary = async (
+    market: Market = DEFAULT_MARKET,
+    options: PortfolioPriceOptions = {},
+  ): Promise<PortfolioSummary> => {
+    const normalized_market = normalizeMarket(market);
+    const { holdings: initial_holdings, total_realized } = loadHoldings(normalized_market);
+
+    const tickers = initial_holdings.map(h => h.ticker);
+    let latest_prices: PriceData = {};
+
+    if (options.force) {
+      latest_prices = await getCurrPriceBatch(tickers, normalized_market);
+      if (Object.keys(latest_prices).length > 0) {
+        await updateCurrentPriceCache(latest_prices, normalized_market);
+      }
+    } else {
+      latest_prices = await loadCurrentPriceCache(normalized_market);
+    }
+
+    prices.value[normalized_market] = {
+      ...prices.value[normalized_market],
+      ...latest_prices,
+    };
+
+    return buildPortfolioSummary(normalized_market, total_realized);
   };
 
   return {

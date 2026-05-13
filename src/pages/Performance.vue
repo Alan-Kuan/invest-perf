@@ -17,7 +17,7 @@ import { Bar, Line } from 'vue-chartjs';
 
 import { useDatabase } from '../composables/useDatabase';
 import { usePortfolio } from '../composables/usePortfolio';
-import { useStockPrice } from '../composables/useStockPrice';
+import { shouldRefreshCurrentPriceCache, useStockPrice } from '../composables/useStockPrice';
 import { getStoreItem, setStoreItem } from '../db';
 import { MARKET_OPTIONS, type Market } from '../utils/market';
 
@@ -49,7 +49,6 @@ const { is_ready, query } = useDatabase();
 const { getPortfolioSummary } = usePortfolio();
 const { fetchHistoricalPrice } = useStockPrice();
 
-const is_loading = ref(false);
 const is_loading_market = ref<Record<Market, boolean>>({
   tw: false,
   us: false,
@@ -461,8 +460,8 @@ async function checkAndRecalculate(market: Market): Promise<void> {
   annual_performance.value[market] = cached_data;
 }
 
-async function loadStatsForMarket(market: Market): Promise<void> {
-  const summary = await getPortfolioSummary(market);
+async function loadStatsForMarket(market: Market, force = false): Promise<void> {
+  const summary = await getPortfolioSummary(market, { force });
   const dividends = query(
     'SELECT * FROM dividends WHERE market = ? ORDER BY pay_date ASC, created_at ASC, id ASC',
     [market],
@@ -491,21 +490,13 @@ async function loadStatsForMarket(market: Market): Promise<void> {
   await checkAndRecalculate(market);
 }
 
-async function refreshMarketData(market: Market): Promise<void> {
+async function refreshMarketData(market: Market, force = true): Promise<void> {
   is_loading_market.value[market] = true;
   try {
-    await loadStatsForMarket(market);
+    await loadStatsForMarket(market, force);
   } finally {
     is_loading_market.value[market] = false;
   }
-}
-
-async function refreshAllMarkets(): Promise<void> {
-  await Promise.all(
-    (['tw', 'us'] as Market[]).map(async market => {
-      await refreshMarketData(market);
-    }),
-  );
 }
 
 watch(
@@ -513,12 +504,10 @@ watch(
   async ready => {
     if (!ready) return;
 
-    is_loading.value = true;
-    try {
-      await refreshAllMarkets();
-    } finally {
-      is_loading.value = false;
-    }
+    await Promise.all((['tw', 'us'] as Market[]).map(market => loadStatsForMarket(market)));
+
+    const markets_to_refresh = (['tw', 'us'] as Market[]).filter(shouldRefreshCurrentPriceCache);
+    void Promise.all(markets_to_refresh.map(async market => await refreshMarketData(market, true)));
   },
   { immediate: true },
 );
