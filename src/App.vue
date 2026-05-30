@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, provide, ref } from 'vue';
+import { computed, onMounted, provide, ref, watch } from 'vue';
+import { useDisplay } from 'vuetify';
 
 import { useDatabase } from './composables/useDatabase';
 import { clearStore } from './db';
@@ -12,8 +13,10 @@ import {
 } from './utils/rise-fall-colors';
 
 const { init, exportData, importData, clear } = useDatabase();
+const { mdAndUp } = useDisplay();
 
 const file_input = ref<HTMLInputElement | null>(null);
+const navigation_drawer = ref(true);
 const is_importing = ref(false);
 
 const snackbar = ref(false);
@@ -49,6 +52,12 @@ function handleExport() {
   exportData();
 }
 
+function closeNavigationDrawerOnMobile() {
+  if (!mdAndUp.value) {
+    navigation_drawer.value = false;
+  }
+}
+
 const rise_fall_color_scheme_label = computed(() =>
   getRiseFallColorSchemeLabel(rise_fall_color_scheme.value),
 );
@@ -65,6 +74,14 @@ onMounted(async () => {
   applyRiseFallColorScheme(rise_fall_color_scheme.value);
   await init();
 });
+
+watch(
+  mdAndUp,
+  is_desktop => {
+    navigation_drawer.value = is_desktop;
+  },
+  { immediate: true },
+);
 
 function toggleRiseFallColorScheme() {
   rise_fall_color_scheme.value =
@@ -129,9 +146,20 @@ async function handleClearCache() {
 
 <template>
   <v-app>
-    <v-navigation-drawer app color="secondary">
+    <v-app-bar v-if="!mdAndUp" app color="secondary" density="compact">
+      <v-app-bar-nav-icon aria-label="切換側邊欄" @click="navigation_drawer = !navigation_drawer" />
+      <v-app-bar-title class="text-accent font-bold">投資績效</v-app-bar-title>
+    </v-app-bar>
+
+    <v-navigation-drawer
+      v-model="navigation_drawer"
+      app
+      color="secondary"
+      :permanent="mdAndUp"
+      :temporary="!mdAndUp"
+    >
       <div class="pa-4">
-        <div class="text-xl text-accent font-bold mb-4">投資績效</div>
+        <div v-if="mdAndUp" class="text-xl text-accent font-bold mb-4">投資績效</div>
 
         <v-divider class="mb-4" />
 
@@ -142,6 +170,7 @@ async function handleClearCache() {
             title="交易"
             value="transactions"
             class="mb-1 rounded-lg px-2"
+            @click="closeNavigationDrawerOnMobile"
           />
           <v-list-item
             to="/dividends"
@@ -149,6 +178,7 @@ async function handleClearCache() {
             title="股利"
             value="dividends"
             class="mb-1 rounded-lg px-2"
+            @click="closeNavigationDrawerOnMobile"
           />
           <v-list-item
             to="/portfolio"
@@ -156,6 +186,7 @@ async function handleClearCache() {
             title="組合"
             value="portfolio"
             class="mb-1 rounded-lg px-2"
+            @click="closeNavigationDrawerOnMobile"
           />
           <v-list-item
             to="/performance"
@@ -163,6 +194,7 @@ async function handleClearCache() {
             title="績效"
             value="performance"
             class="mb-1 rounded-lg px-2"
+            @click="closeNavigationDrawerOnMobile"
           />
         </v-list>
       </div>
