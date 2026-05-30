@@ -477,44 +477,46 @@ onMounted(async () => {
                 density="compact"
                 min="1"
                 hide-spin-buttons
-              >
-                <template #append-inner>
-                  <div class="flex">
-                    <v-btn
-                      size="small"
-                      class="text-rise"
-                      variant="text"
-                      @click="adjustShares(share_step_labels.major_step)"
-                    >
-                      {{ share_step_labels.major_plus }}
-                    </v-btn>
-                    <v-btn
-                      size="small"
-                      class="text-rise"
-                      variant="text"
-                      @click="adjustShares(share_step_labels.minor_step)"
-                    >
-                      {{ share_step_labels.minor_plus }}
-                    </v-btn>
-                    <v-btn
-                      size="small"
-                      class="text-fall"
-                      variant="text"
-                      @click="adjustShares(-share_step_labels.major_step)"
-                    >
-                      {{ share_step_labels.major_minus }}
-                    </v-btn>
-                    <v-btn
-                      size="small"
-                      class="text-fall"
-                      variant="text"
-                      @click="adjustShares(-share_step_labels.minor_step)"
-                    >
-                      {{ share_step_labels.minor_minus }}
-                    </v-btn>
-                  </div>
-                </template>
-              </v-text-field>
+              />
+              <div class="h-7 flex justify-end items-center mt-n2">
+                <div class="flex">
+                  <v-btn
+                    size="small"
+                    class="text-fall"
+                    variant="text"
+                    @click="adjustShares(-share_step_labels.minor_step)"
+                  >
+                    {{ share_step_labels.minor_minus }}
+                  </v-btn>
+                  <v-btn
+                    size="small"
+                    class="text-rise"
+                    variant="text"
+                    @click="adjustShares(share_step_labels.minor_step)"
+                  >
+                    {{ share_step_labels.minor_plus }}
+                  </v-btn>
+                </div>
+                <span class="mx-1 text-neutral-400">/</span>
+                <div class="flex">
+                  <v-btn
+                    size="small"
+                    class="text-fall"
+                    variant="text"
+                    @click="adjustShares(-share_step_labels.major_step)"
+                  >
+                    {{ share_step_labels.major_minus }}
+                  </v-btn>
+                  <v-btn
+                    size="small"
+                    class="text-rise"
+                    variant="text"
+                    @click="adjustShares(share_step_labels.major_step)"
+                  >
+                    {{ share_step_labels.major_plus }}
+                  </v-btn>
+                </div>
+              </div>
             </v-col>
 
             <v-col cols="12" sm="6" md="3">
