@@ -1,5 +1,14 @@
 <script setup lang="ts">
-import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
+import {
+  Chart as ChartJS,
+  ArcElement,
+  Tooltip,
+  Legend,
+  type ChartData,
+  type ChartOptions,
+  type Plugin,
+  type TooltipItem,
+} from 'chart.js';
 import { onUnmounted, ref, watch } from 'vue';
 import { Doughnut } from 'vue-chartjs';
 
@@ -13,6 +22,45 @@ import { getChartColorPalette } from '../utils/chart-colors';
 import { MARKET_OPTIONS, type Market } from '../utils/market';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
+
+type DistributionMetric = 'cost' | 'value';
+
+const percentageLabelPlugin: Plugin<'doughnut'> = {
+  id: 'percentageLabel',
+  afterDatasetsDraw(chart) {
+    const { ctx } = chart;
+    const dataset = chart.data.datasets[0];
+    if (!dataset) return;
+
+    const values = dataset.data.map(value => Number(value) || 0);
+    const total = values.reduce((sum, value) => sum + value, 0);
+
+    if (total <= 0) return;
+
+    ctx.save();
+    ctx.font = '600 12px sans-serif';
+    ctx.fillStyle = '#262626';
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 3;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    chart.getDatasetMeta(0).data.forEach((element, index) => {
+      const value = values[index] ?? 0;
+      const ratio = (value / total) * 100;
+
+      if (ratio < 4) return;
+
+      const position = element.tooltipPosition(true);
+      if (position.x === null || position.y === null) return;
+
+      ctx.strokeText(`${ratio.toFixed(1)}%`, position.x, position.y);
+      ctx.fillText(`${ratio.toFixed(1)}%`, position.x, position.y);
+    });
+
+    ctx.restore();
+  },
+};
 
 const { is_ready } = useDatabase();
 const { getPortfolioSummary } = usePortfolio();
@@ -88,32 +136,72 @@ function formatAmount(value: number, market: Market): string {
   return value.toLocaleString();
 }
 
-function getDistributionChartData(summary: PortfolioSummary) {
+function getHoldingDistributionValue(
+  summary: PortfolioSummary,
+  metric: DistributionMetric,
+  index: number,
+): number {
+  const holding = summary.holdings[index];
+  if (!holding) return 0;
+
+  return metric === 'cost' ? holding.total_cost : holding.total_value || 0;
+}
+
+function getDistributionColors(summary: PortfolioSummary): string[] {
+  return getChartColorPalette(summary.holdings.length);
+}
+
+function getDistributionColor(summary: PortfolioSummary, index: number): string {
+  return getDistributionColors(summary)[index] ?? '#d4d4d4';
+}
+
+function getDistributionChartData(
+  summary: PortfolioSummary,
+  metric: DistributionMetric,
+): ChartData<'doughnut', number[], string> {
   return {
     labels: summary.holdings.map(holding => holding.name || holding.ticker),
     datasets: [
       {
-        data: summary.holdings.map(holding => holding.total_value || 0),
-        backgroundColor: getChartColorPalette(summary.holdings.length),
+        data: summary.holdings.map(holding =>
+          metric === 'cost' ? holding.total_cost : holding.total_value || 0,
+        ),
+        backgroundColor: getDistributionColors(summary),
+        borderColor: '#ffffff',
+        borderWidth: 2,
       },
     ],
   };
 }
 
-function getDistributionChartOptions(summary: PortfolioSummary) {
+function getDistributionChartOptions(
+  summary: PortfolioSummary,
+  metric: DistributionMetric,
+  market: Market,
+): ChartOptions<'doughnut'> {
   return {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
       legend: {
-        position: 'right' as const,
+        display: false,
       },
       tooltip: {
         callbacks: {
-          label: (ctx: any) => {
+          label: (ctx: TooltipItem<'doughnut'>) => {
             const item = summary.holdings[ctx.dataIndex ?? 0];
             if (!item) return '';
-            return `${item.name} (${item.ticker}): ${item.total_value?.toLocaleString()}`;
+
+            const label = item.name || item.ticker;
+            const value = getHoldingDistributionValue(summary, metric, ctx.dataIndex ?? 0);
+            const total = summary.holdings.reduce(
+              (sum, _, index) => sum + getHoldingDistributionValue(summary, metric, index),
+              0,
+            );
+            const ratio = total > 0 ? (value / total) * 100 : 0;
+            return `${label} (${item.ticker}): ${formatAmount(value, market)} (${ratio.toFixed(
+              1,
+            )}%)`;
           },
         },
       },
@@ -245,15 +333,50 @@ onUnmounted(() => {
       <v-card class="mb-4 rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.08)]">
         <v-card-item class="font-medium pb-2">資產配置</v-card-item>
         <v-card-text>
-          <div class="h-80">
-            <Doughnut
-              v-if="summaries[market.value].holdings.length > 0"
-              :data="getDistributionChartData(summaries[market.value])"
-              :options="getDistributionChartOptions(summaries[market.value])"
-            />
-            <div v-else class="flex items-center justify-center h-full text-neutral-400">
-              尚無資料
+          <template v-if="summaries[market.value].holdings.length > 0">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="min-h-80">
+                <div class="text-center text-sm font-medium text-neutral-500 mb-2">成本比例</div>
+                <div class="h-72 md:h-80">
+                  <Doughnut
+                    :data="getDistributionChartData(summaries[market.value], 'cost')"
+                    :options="
+                      getDistributionChartOptions(summaries[market.value], 'cost', market.value)
+                    "
+                    :plugins="[percentageLabelPlugin]"
+                  />
+                </div>
+              </div>
+              <div class="min-h-80">
+                <div class="text-center text-sm font-medium text-neutral-500 mb-2">現值比例</div>
+                <div class="h-72 md:h-80">
+                  <Doughnut
+                    :data="getDistributionChartData(summaries[market.value], 'value')"
+                    :options="
+                      getDistributionChartOptions(summaries[market.value], 'value', market.value)
+                    "
+                    :plugins="[percentageLabelPlugin]"
+                  />
+                </div>
+              </div>
             </div>
+
+            <div class="flex flex-wrap justify-center gap-x-4 gap-y-2 mt-4 text-sm">
+              <div
+                v-for="(holding, index) in summaries[market.value].holdings"
+                :key="holding.ticker"
+                class="flex items-center min-w-0"
+              >
+                <span
+                  class="inline-block w-3 h-3 rounded-sm mr-2 shrink-0"
+                  :style="{ backgroundColor: getDistributionColor(summaries[market.value], index) }"
+                ></span>
+                <span class="truncate text-neutral-600">{{ holding.name || holding.ticker }}</span>
+              </div>
+            </div>
+          </template>
+          <div v-else class="h-80">
+            <div class="flex items-center justify-center h-full text-neutral-400">尚無資料</div>
           </div>
         </v-card-text>
       </v-card>
